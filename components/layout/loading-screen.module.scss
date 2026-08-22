@@ -1,0 +1,242 @@
+.screen {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  color: #171717;
+  overflow: hidden;
+}
+
+.page {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--off-background);
+  padding: 2rem;
+}
+
+.inline {
+  min-height: 12rem;
+  width: 100%;
+  padding: 2rem 1rem;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.65rem;
+  animation: fade-in 0.45s ease both;
+}
+
+.logo {
+  height: 5rem;
+  width: auto;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.page .logo {
+  height: 6.5rem;
+}
+
+.mark {
+  position: relative;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.page .mark {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.28rem solid transparent;
+  animation: spin 1.15s linear infinite;
+
+  &:nth-child(1) {
+    border-top-color: var(--tu-red);
+  }
+
+  &:nth-child(2) {
+    inset: 0.28rem;
+    border-right-color: var(--orange);
+    animation-duration: 1.55s;
+    animation-direction: reverse;
+  }
+
+  &:nth-child(3) {
+    inset: 0.56rem;
+    border-bottom-color: var(--green);
+    animation-duration: 2s;
+  }
+}
+
+.title {
+  margin: 0.35rem 0 0;
+  font-size: 2.5rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.inline .title {
+  font-size: 1.5rem;
+}
+
+.what {
+  margin: 0;
+  color: #6b6760;
+  font-weight: 300;
+  font-size: 1.1rem;
+  text-transform: capitalize;
+}
+
+.list {
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+  color: #6b6760;
+  font-weight: 300;
+  font-size: 1rem;
+  text-transform: capitalize;
+
+  li {
+    position: relative;
+    padding-left: 0.9rem;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.55em;
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
+      background: var(--orange);
+    }
+
+    &:nth-child(3n + 2)::before {
+      background: var(--green);
+    }
+
+    &:nth-child(3n)::before {
+      background: var(--tu-red);
+    }
+  }
+}
+
+.arcs {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.gray,
+.orange,
+.green,
+.red {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.gray {
+  top: -45%;
+  left: -10%;
+  width: 90rem;
+  height: 90rem;
+  border: 4.5rem solid var(--gray);
+  opacity: 0.55;
+}
+
+.orange {
+  top: -20%;
+  left: -55%;
+  width: 120rem;
+  height: 120rem;
+  border: 4.5rem solid var(--orange);
+  opacity: 0.7;
+}
+
+.green {
+  right: -40%;
+  bottom: -45%;
+  width: 90rem;
+  height: 90rem;
+  border: 4.5rem solid var(--green);
+  opacity: 0.55;
+}
+
+.red {
+  top: 8%;
+  right: -50%;
+  width: 110rem;
+  height: 110rem;
+  border: 4.5rem solid var(--tu-red);
+  opacity: 0.45;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content,
+  .logo,
+  .ring {
+    animation: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 2rem;
+  }
+
+  .page .logo {
+    height: 5.25rem;
+  }
+
+  .gray,
+  .orange,
+  .green,
+  .red {
+    border-width: 3rem;
+  }
+}

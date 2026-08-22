@@ -1,0 +1,50 @@
+:root {
+  --background: #fafafa;
+
+  --off-yellow: #fffcf7;
+  --off-background: #fffbf3;
+  --tu-red: #c3003f;
+
+  --orange: #dc7339;
+  --green: #135642;
+  --gray: #bdbec0;
+
+  //phone screen size
+  --phone-screen: 600px;
+  --tablet-screen: 900px;
+
+  // font-size: 62.5%; // 1rem = 10px
+
+  @media (max-width: 600px) {
+    font-size: 90%;
+  }
+}
+
+// @media (prefers-color-scheme: dark) {
+//   :root {
+//     --background: #0a0a0a;
+//     --foreground: #ededed;
+//   }
+// }
+
+body {
+  background: var(--background);
+  margin: 0;
+  padding: 0;
+  color: var(--foreground);
+  font-family: "Inter", sans-serif;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@import url("https://pro.boxicons.com/fonts/3.0.8/basic/regular/400/boxicons.min.css?sig=44d0ffd8c35c5df4a4e5d8637b495a3c5e592d2a684120dd5cac3b87db79632b");
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+Myanmar:wght@100..900&family=Noto+Sans+Thai:wght@100..900&display=swap");

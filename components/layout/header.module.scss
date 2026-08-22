@@ -1,0 +1,63 @@
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  padding: 1rem 5rem;
+  background-color: var(--off-yellow);
+  box-shadow: 0 0 1rem 0.25rem rgba(0, 0, 0, 0.141);
+  z-index: 2;
+
+  @media (max-width: 600px) {
+    padding: 1rem 2rem;
+    justify-content: center;
+  }
+}
+
+.logo {
+  height: 4rem;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.right {
+  flex-grow: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+
+  span {
+    margin-right: 1rem;
+  }
+}
+
+.account {
+  position: relative;
+}
+
+.popup {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 3;
+  display: grid;
+  gap: 0.5rem;
+  min-width: 12rem;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  background: white;
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.14);
+
+  button {
+    width: 100%;
+    height: auto;
+  }
+}

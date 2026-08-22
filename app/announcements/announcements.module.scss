@@ -1,0 +1,162 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  color: #171717;
+}
+
+.banner {
+  background: var(--green);
+  color: white;
+}
+
+.bannerInner {
+  max-width: 90rem;
+  margin: 0 auto;
+  padding: 1.4rem 5rem;
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    line-height: 1.1;
+  }
+
+  p {
+    margin: 0.45rem 0 0;
+    opacity: 0.9;
+  }
+
+  @media (max-width: 900px) {
+    padding: 1.3rem 2rem;
+  }
+}
+
+.main {
+  flex: 1;
+  padding: 3rem 5rem 5rem;
+  font-size: 1.1rem;
+  text-align: justify;
+  @media (max-width: 900px) {
+    padding: 2rem;
+  }
+}
+
+.inner {
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.article {
+  padding: clamp(1.5rem, 5vw, 4rem);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+
+  h1,
+  h2,
+  h3 {
+    color: var(--green);
+    line-height: 1.2;
+    margin-top: 1.8em;
+  }
+
+  h1:first-child,
+  h2:first-child,
+  h3:first-child {
+    margin-top: 0;
+  }
+
+  p {
+    margin: 0 0 1.1rem;
+  }
+
+  a {
+    color: var(--tu-red);
+    text-decoration: underline;
+  }
+
+  blockquote {
+    border-left: 0.3rem solid var(--orange);
+    margin-left: 0;
+    padding-left: 1rem;
+    color: #59554e;
+  }
+
+  img {
+    max-width: 100%;
+  }
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1.5rem;
+
+  span {
+    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
+    background: #ece7df;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.state {
+  min-height: 35vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #656159;
+}
+
+.back {
+  display: inline-block;
+  margin-top: 2rem;
+  color: var(--tu-red);
+  font-weight: 600;
+}
+
+.attribution {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e7e1d8;
+  font-size: 0.9rem;
+
+  strong {
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  p {
+    margin: 0.15rem 0;
+  }
+
+  @media (max-width: 650px) {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
