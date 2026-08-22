@@ -12,18 +12,17 @@ const abstractPages = [
 export default function AbstractAdminNav() {
   const pathname = usePathname();
 
+  const isAbstractDetail =
+    pathname.startsWith("/admin/abstracts/") &&
+    pathname !== "/admin/abstracts/all";
+
   return (
     <nav className={styles.subnav} aria-label="Abstract administration">
       {abstractPages.map((page) => {
-        const isAbstractDetail =
-          pathname.startsWith("/admin/abstracts/") &&
-          pathname !== "/admin/abstracts/all";
         const isActive =
           page.href === "/admin/abstracts"
             ? pathname === page.href
-            : page.href === "/admin/abstracts/all"
-              ? pathname === page.href || isAbstractDetail
-              : pathname.startsWith(page.href);
+            : pathname === page.href || isAbstractDetail;
 
         return (
           <Link
