@@ -37,6 +37,8 @@ export const userFields = {
   image: v.optional(v.string()),
   profileImageId: v.optional(v.id("_storage")),
   email: v.optional(v.string()),
+  normalizedEmail: v.optional(v.string()),
+  searchText: v.optional(v.string()),
   emailVerificationTime: v.optional(v.number()),
   phone: v.optional(v.string()),
   phoneVerificationTime: v.optional(v.number()),
@@ -56,6 +58,9 @@ export const userFields = {
   wantsNotifications: v.optional(v.boolean()),
   profileComplete: v.optional(v.boolean()),
   role: v.optional(userRoleValidator),
+  preRegisteredAt: v.optional(v.number()),
+  preRegisteredBy: v.optional(v.id("users")),
+  claimedAt: v.optional(v.number()),
 };
 
 export const userValidator = v.object({

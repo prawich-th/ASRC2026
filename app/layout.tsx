@@ -7,7 +7,9 @@ export const metadata: Metadata = {
   title: "ASRC2027",
   description: "CICM Annual Student Research Conference 2027",
   icons: {
-    icon: "/asrc.png",
+    icon: [{ url: "/asrc.png", type: "image/png", sizes: "any" }],
+    shortcut: "/asrc.png",
+    apple: "/asrc.png",
   },
 };
 
@@ -23,9 +25,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/asrc.png" />
-      </head>
       <body className={inter.className}>
         <ConvexClientProvider>{children}</ConvexClientProvider>
       </body>

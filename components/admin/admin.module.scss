@@ -35,6 +35,19 @@
   gap: 0.6rem;
 }
 
+.backLink {
+  margin: 0;
+
+  a {
+    color: #68635c;
+    font-weight: 650;
+
+    &:hover {
+      color: var(--green);
+    }
+  }
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -140,6 +153,15 @@
   tbody tr:hover {
     background: #fffcf7;
   }
+
+  a {
+    color: var(--green);
+    font-weight: 650;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .badge {
@@ -240,6 +262,43 @@
   justify-content: center;
   gap: 0.75rem;
   margin-top: 1rem;
+}
+
+.subnav {
+  display: flex;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid #d8d1c7;
+  overflow-x: auto;
+
+  a {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 0.2rem 0 0.75rem;
+    color: #68635c;
+    font-weight: 650;
+
+    &:hover {
+      color: var(--green);
+      text-decoration: none;
+    }
+
+    &[aria-current="page"] {
+      color: var(--green);
+      text-decoration: none;
+
+      &::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: -1px;
+        left: 0;
+        height: 3px;
+        border-radius: 999px 999px 0 0;
+        background: var(--green);
+      }
+    }
+  }
 }
 
 .preview {
@@ -500,4 +559,59 @@
     font-weight: 650;
     text-decoration: underline;
   }
+}
+
+.importPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #ded7cd;
+  border-radius: 0.7rem;
+  background: #fbf8f3;
+}
+
+.importHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  h2,
+  p {
+    margin: 0;
+  }
+
+  p {
+    margin-top: 0.35rem;
+    color: #68635c;
+  }
+}
+
+.importErrors {
+  padding: 0.9rem 1rem;
+  border: 1px solid #edb9c2;
+  border-radius: 0.55rem;
+  background: #fff3f5;
+  color: #8b1727;
+
+  ul {
+    margin: 0.55rem 0 0;
+    padding-left: 1.2rem;
+  }
+
+  p {
+    margin: 0.55rem 0 0;
+  }
+}
+
+.importSummary {
+  margin: 0;
+  color: #5f5a53;
+}
+
+.previewTable {
+  min-width: 54rem;
+  background: white;
+  font-size: 0.9rem;
 }

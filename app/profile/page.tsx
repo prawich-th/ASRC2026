@@ -26,7 +26,10 @@ import {
 } from "react";
 import styles from "./profile.module.scss";
 
-const prefixOptions = PREFIXES.map((prefix) => ({ value: prefix, label: prefix }));
+const prefixOptions = PREFIXES.map((prefix) => ({
+  value: prefix,
+  label: prefix,
+}));
 
 type ProfileDraft = {
   prefix: (typeof PREFIXES)[number];
@@ -100,7 +103,9 @@ export default function ProfilePage() {
       return;
     }
     if (!formReady) {
-      setError("Please complete prefix, first name, last name, and institution.");
+      setError(
+        "Please complete prefix, first name, last name, and institution.",
+      );
       return;
     }
 
@@ -109,11 +114,15 @@ export default function ProfilePage() {
       await updateProfile({
         prefix: formValues.prefix,
         firstName: formValues.firstName,
-        otherName: formValues.otherName.trim() ? formValues.otherName : undefined,
+        otherName: formValues.otherName.trim()
+          ? formValues.otherName
+          : undefined,
         lastName: formValues.lastName,
         suffix: formValues.suffix.trim() ? formValues.suffix : undefined,
         institution: formValues.institution,
-        department: formValues.department.trim() ? formValues.department : undefined,
+        department: formValues.department.trim()
+          ? formValues.department
+          : undefined,
         position: formValues.position.trim() ? formValues.position : undefined,
       });
       setDraft(null);
@@ -127,7 +136,9 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleProfileImageChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleProfileImageChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
     setError("");
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -168,7 +179,9 @@ export default function ProfilePage() {
       router.refresh();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not update profile image.",
+        caught instanceof Error
+          ? caught.message
+          : "Could not update profile image.",
       );
     } finally {
       setImageUploading(false);
@@ -183,7 +196,9 @@ export default function ProfilePage() {
       router.refresh();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not remove profile image.",
+        caught instanceof Error
+          ? caught.message
+          : "Could not remove profile image.",
       );
     } finally {
       setImageUploading(false);
@@ -379,7 +394,10 @@ export default function ProfilePage() {
                         </span>
                         <h3>{abstract.title}</h3>
                       </div>
-                      <Link href={`/abstracts/${abstract._id}`} className={styles.chevron}>
+                      <Link
+                        href={`/abstracts/${abstract._id}`}
+                        className={styles.chevron}
+                      >
                         <i className="bx bx-chevron-right" aria-hidden="true" />
                       </Link>
                     </li>

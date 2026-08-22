@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as ResendOTP from "../ResendOTP.js";
 import type * as abstracts from "../abstracts.js";
 import type * as adminUsers from "../adminUsers.js";
 import type * as announcements from "../announcements.js";
@@ -17,7 +18,11 @@ import type * as keyDates from "../keyDates.js";
 import type * as lib_abstract from "../lib/abstract.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_content from "../lib/content.js";
+import type * as lib_emailTemplates from "../lib/emailTemplates.js";
+import type * as lib_notification from "../lib/notification.js";
+import type * as lib_preRegistration from "../lib/preRegistration.js";
 import type * as lib_profile from "../lib/profile.js";
+import type * as notifications from "../notifications.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,6 +32,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  ResendOTP: typeof ResendOTP;
   abstracts: typeof abstracts;
   adminUsers: typeof adminUsers;
   announcements: typeof announcements;
@@ -36,7 +42,11 @@ declare const fullApi: ApiFromModules<{
   "lib/abstract": typeof lib_abstract;
   "lib/auth": typeof lib_auth;
   "lib/content": typeof lib_content;
+  "lib/emailTemplates": typeof lib_emailTemplates;
+  "lib/notification": typeof lib_notification;
+  "lib/preRegistration": typeof lib_preRegistration;
   "lib/profile": typeof lib_profile;
+  notifications: typeof notifications;
   users: typeof users;
 }>;
 
@@ -66,4 +76,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+};

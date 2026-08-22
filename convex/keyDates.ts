@@ -6,6 +6,11 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireRole } from "./lib/auth";
 import { keyDateToneValidator, keyDateValidator } from "./lib/content";
+import { keyDateEmail } from "./lib/emailTemplates";
+import {
+  createBroadcastCampaign,
+  getSiteUrl,
+} from "./notifications";
 
 function normalizeKeyDate(args: { displayDate: string; title: string }) {
   const displayDate = args.displayDate.trim();
@@ -70,6 +75,16 @@ export const create = mutation({
     if (!keyDate) {
       throw new Error("Could not create key date");
     }
+    if (keyDate.published) {
+      await createBroadcastCampaign(ctx, {
+        kind: "key_date",
+        content: keyDateEmail({
+          title: keyDate.title,
+          displayDate: keyDate.displayDate,
+          url: getSiteUrl("/"),
+        }),
+      });
+    }
     return keyDate;
   },
 });
@@ -99,6 +114,23 @@ export const update = mutation({
     const updated = await ctx.db.get("keyDates", keyDate._id);
     if (!updated) {
       throw new Error("Could not update key date");
+    }
+    const titleChanged = keyDate.title !== updated.title;
+    const displayDateChanged =
+      keyDate.displayDate !== updated.displayDate;
+    if (keyDate.published && (titleChanged || displayDateChanged)) {
+      await createBroadcastCampaign(ctx, {
+        kind: "key_date",
+        content: keyDateEmail({
+          title: updated.title,
+          displayDate: updated.displayDate,
+          previousTitle: titleChanged ? keyDate.title : undefined,
+          previousDisplayDate: displayDateChanged
+            ? keyDate.displayDate
+            : undefined,
+          url: getSiteUrl("/"),
+        }),
+      });
     }
     return updated;
   },
@@ -153,6 +185,16 @@ export const setPublished = mutation({
     const updated = await ctx.db.get("keyDates", keyDate._id);
     if (!updated) {
       throw new Error("Could not update key date publication status");
+    }
+    if (args.published && !keyDate.published) {
+      await createBroadcastCampaign(ctx, {
+        kind: "key_date",
+        content: keyDateEmail({
+          title: updated.title,
+          displayDate: updated.displayDate,
+          url: getSiteUrl("/"),
+        }),
+      });
     }
     return updated;
   },

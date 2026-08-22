@@ -22,6 +22,7 @@ export const abstractStatusValidator = v.union(
 
 export const abstractFields = {
   ownerId: v.id("users"),
+  code: v.string(),
   title: v.string(),
   body: v.string(),
   keywords: v.array(v.string()),
@@ -41,6 +42,7 @@ export const abstractValidator = v.object({
   _id: v.id("abstracts"),
   _creationTime: v.number(),
   ownerId: v.id("users"),
+  code: v.string(),
   title: v.string(),
   body: v.string(),
   keywords: v.array(v.string()),
@@ -63,6 +65,7 @@ export const adminAbstractValidator = v.object({
 export const abstractSummaryValidator = v.object({
   _id: v.id("abstracts"),
   _creationTime: v.number(),
+  code: v.string(),
   title: v.string(),
   keywords: v.array(v.string()),
   category: abstractCategoryValidator,
@@ -114,6 +117,7 @@ export const adminAbstractSummaryValidator = v.object({
   abstract: v.object({
     _id: v.id("abstracts"),
     _creationTime: v.number(),
+    code: v.string(),
     title: v.string(),
     category: abstractCategoryValidator,
     status: abstractStatusValidator,

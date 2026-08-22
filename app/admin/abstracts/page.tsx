@@ -77,6 +77,7 @@ function ReviewQueue() {
                   onClick={() => setSelectedId(item.abstract._id)}
                 >
                   <strong>{item.abstract.title}</strong>
+                  <span>{item.abstract.code}</span>
                   <span>{item.owner.name || item.owner.email || "Unknown"}</span>
                   <small>{item.abstract.category} presentation</small>
                 </button>

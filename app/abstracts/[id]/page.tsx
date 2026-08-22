@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   getAbstractStatusLabel,
+  getAbstractStatusMessage,
   getAbstractStatusTone,
   getCategoryLabel,
 } from "@/lib/abstractDisplay";
@@ -75,6 +76,7 @@ export default function AbstractViewPage() {
 
   const statusTone = getAbstractStatusTone(detail.abstract.status);
   const statusLabel = getAbstractStatusLabel(detail.abstract.status);
+  const statusMessage = getAbstractStatusMessage(detail.abstract.status);
 
   return (
     <div className={styles.page}>
@@ -92,7 +94,7 @@ export default function AbstractViewPage() {
               <ul className={styles.metaRows}>
                 <li>
                   <strong>Submission ID</strong>
-                  <span>{detail.abstract._id}</span>
+                  <span>{detail.abstract.code}</span>
                 </li>
                 <li>
                   <strong>Submission Date</strong>
@@ -115,11 +117,7 @@ export default function AbstractViewPage() {
                 <i className="bx bx-search-alt-2" aria-hidden="true" />
               </div>
               <div className={styles.statusBody}>
-                <p>
-                  {detail.abstract.status === "revision_requested"
-                    ? "The committee has requested changes. Review the feedback below, revise your abstract, and resubmit it."
-                    : "Your abstract has been saved in the system. You will be notified when the scientific committee updates the review result."}
-                </p>
+                <p>{statusMessage}</p>
                 <p className={styles.updated}>
                   Last updated {formatDate(detail.abstract.updatedAt)}
                 </p>

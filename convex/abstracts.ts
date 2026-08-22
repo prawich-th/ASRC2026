@@ -3,8 +3,15 @@ import {
   paginationResultValidator,
 } from "convex/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
-import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
+import {
+  internalMutation,
+  mutation,
+  MutationCtx,
+  query,
+  QueryCtx,
+} from "./_generated/server";
 import {
   abstractCategoryValidator,
   abstractDetailValidator,
@@ -17,6 +24,14 @@ import {
   adminAbstractValidator,
 } from "./lib/abstract";
 import { getCurrentUser, requireRole } from "./lib/auth";
+import {
+  abstractDecisionEmail,
+  abstractSubmissionEmail,
+} from "./lib/emailTemplates";
+import {
+  getSiteUrl,
+  queueTransactionalEmail,
+} from "./notifications";
 
 type StorageMetadata = {
   _id: Id<"_storage">;
@@ -26,11 +41,45 @@ type StorageMetadata = {
   size: number;
 };
 
+const ABSTRACT_CODE_PATTERN = /^\d{6}$/;
+const ABSTRACT_CODE_ATTEMPTS = 20;
+
+function isAbstractCode(value: string | undefined): value is string {
+  return typeof value === "string" && ABSTRACT_CODE_PATTERN.test(value);
+}
+
+async function allocateAbstractCode(ctx: MutationCtx): Promise<string> {
+  for (let attempt = 0; attempt < ABSTRACT_CODE_ATTEMPTS; attempt++) {
+    const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+    const existing = await ctx.db
+      .query("abstracts")
+      .withIndex("by_code", (q) => q.eq("code", code))
+      .first();
+    if (!existing) {
+      return code;
+    }
+  }
+  throw new Error("Could not allocate a unique abstract code");
+}
+
+async function ensureAbstractCode(
+  ctx: MutationCtx,
+  abstract: Doc<"abstracts">,
+): Promise<string> {
+  if (isAbstractCode(abstract.code)) {
+    return abstract.code;
+  }
+  const code = await allocateAbstractCode(ctx);
+  await ctx.db.patch("abstracts", abstract._id, { code });
+  return code;
+}
+
 function toOwnerAbstract(abstract: Doc<"abstracts">) {
   return {
     _id: abstract._id,
     _creationTime: abstract._creationTime,
     ownerId: abstract.ownerId,
+    code: abstract.code ?? "",
     title: abstract.title,
     body: abstract.body,
     keywords: abstract.keywords,
@@ -111,6 +160,7 @@ export const listMine = query({
     return abstracts.map((item) => ({
       _id: item._id,
       _creationTime: item._creationTime,
+      code: item.code ?? "",
       title: item.title,
       keywords: item.keywords,
       category: item.category,
@@ -164,6 +214,7 @@ export const createDraft = mutation({
     const now = Date.now();
     const abstractId = await ctx.db.insert("abstracts", {
       ownerId: user._id,
+      code: await allocateAbstractCode(ctx),
       title: args.title.trim(),
       body: args.body.trim(),
       keywords,
@@ -238,6 +289,7 @@ export const submitDraft = mutation({
     }
 
     const now = Date.now();
+    const code = await ensureAbstractCode(ctx, abstract);
     await ctx.db.patch("abstracts", abstract._id, {
       status: "submitted",
       submittedAt: now,
@@ -248,6 +300,17 @@ export const submitDraft = mutation({
     if (!submittedAbstract) {
       throw new Error("Could not submit abstract");
     }
+    await queueTransactionalEmail(
+      ctx,
+      user.email,
+      abstractSubmissionEmail({
+        title: submittedAbstract.title,
+        submissionId: code,
+        submittedAt: now,
+        resubmission: abstract.status === "revision_requested",
+        url: getSiteUrl(`/abstracts/${submittedAbstract._id}`),
+      }),
+    );
     return toOwnerAbstract(submittedAbstract);
   },
 });
@@ -365,6 +428,7 @@ export const listForReview = query({
           abstract: {
             _id: abstract._id,
             _creationTime: abstract._creationTime,
+            code: abstract.code ?? "",
             title: abstract.title,
             category: abstract.category,
             status: abstract.status,
@@ -431,6 +495,7 @@ export const saveReview = mutation({
       throw new Error("Submitter feedback is required when requesting revisions");
     }
     const now = Date.now();
+    const code = await ensureAbstractCode(ctx, abstract);
     await ctx.db.patch("abstracts", abstract._id, {
       privateNotes,
       submitterFeedback,
@@ -443,6 +508,45 @@ export const saveReview = mutation({
     if (!updated) {
       throw new Error("Could not save abstract review");
     }
+    if (args.decision !== undefined) {
+      const owner = await ctx.db.get("users", abstract.ownerId);
+      await queueTransactionalEmail(
+        ctx,
+        owner?.email,
+        abstractDecisionEmail({
+          decision: args.decision,
+          title: updated.title,
+          submissionId: code,
+          feedback: updated.submitterFeedback,
+          url: getSiteUrl(`/abstracts/${updated._id}`),
+        }),
+      );
+    }
     return updated;
+  },
+});
+
+export const backfillAbstractCodes = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("abstracts").paginate({
+      cursor: args.cursor,
+      numItems: 100,
+    });
+    for (const abstract of page.page) {
+      if (isAbstractCode(abstract.code)) {
+        continue;
+      }
+      await ctx.db.patch("abstracts", abstract._id, {
+        code: await allocateAbstractCode(ctx),
+      });
+    }
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.abstracts.backfillAbstractCodes, {
+        cursor: page.continueCursor,
+      });
+    }
+    return null;
   },
 });

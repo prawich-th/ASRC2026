@@ -1,4 +1,9 @@
 import { v } from "convex/values";
+import {
+  buildDisplayName,
+  buildUserSearchText,
+  normalizeEmail,
+} from "../lib/userData";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser, getCurrentUserOrNull } from "./lib/auth";
@@ -7,10 +12,6 @@ import {
   prefixValidator,
   userValidator,
 } from "./lib/profile";
-
-function buildDisplayName(parts: Array<string | undefined>) {
-  return parts.filter((part) => Boolean(part && part.trim())).join(" ");
-}
 
 type StorageMetadata = {
   _id: Id<"_storage">;
@@ -64,6 +65,12 @@ export const completeProfile = mutation({
       args.lastName,
       args.suffix,
     ]);
+    const normalizedEmail = user.email
+      ? normalizeEmail(user.email)
+      : undefined;
+    const phone = args.phone.trim();
+    const institution = args.institution.trim();
+    const department = args.department?.trim() || undefined;
 
     await ctx.db.patch("users", user._id, {
       prefix: args.prefix,
@@ -72,13 +79,21 @@ export const completeProfile = mutation({
       lastName: args.lastName.trim(),
       suffix: args.suffix?.trim() || undefined,
       specialty: args.specialty?.trim() || undefined,
-      phone: args.phone.trim(),
-      institution: args.institution.trim(),
+      phone,
+      institution,
       position: args.position?.trim() || undefined,
-      department: args.department?.trim() || undefined,
+      department,
       participantCategory: args.participantCategory,
       city: args.city?.trim() || undefined,
       name,
+      normalizedEmail,
+      searchText: buildUserSearchText({
+        name,
+        email: normalizedEmail,
+        phone,
+        institution,
+        department,
+      }),
       profileComplete: true,
     });
     return null;
@@ -106,6 +121,11 @@ export const updateProfile = mutation({
       args.lastName,
       args.suffix,
     ]);
+    const normalizedEmail = user.email
+      ? normalizeEmail(user.email)
+      : undefined;
+    const institution = args.institution.trim();
+    const department = args.department?.trim() || undefined;
 
     await ctx.db.patch("users", user._id, {
       prefix: args.prefix,
@@ -113,10 +133,18 @@ export const updateProfile = mutation({
       otherName: args.otherName?.trim() || undefined,
       lastName: args.lastName.trim(),
       suffix: args.suffix?.trim() || undefined,
-      institution: args.institution.trim(),
+      institution,
       position: args.position?.trim() || undefined,
-      department: args.department?.trim() || undefined,
+      department,
       name,
+      normalizedEmail,
+      searchText: buildUserSearchText({
+        name,
+        email: normalizedEmail,
+        phone: user.phone,
+        institution,
+        department,
+      }),
     });
 
     return null;

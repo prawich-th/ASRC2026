@@ -5,19 +5,32 @@ import FilePreviewDrawer, { PreviewFile } from "./file-preview-drawer";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { getCategoryLabel } from "@/lib/abstractDisplay";
+import {
+  getAbstractStatusLabel,
+  getCategoryLabel,
+} from "@/lib/abstractDisplay";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import styles from "./admin.module.scss";
 
 type Decision = "selected" | "rejected" | "revision_requested";
 
+function getStatusClass(status: string) {
+  if (status === "selected") {
+    return styles.green;
+  }
+  if (status === "rejected") {
+    return styles.red;
+  }
+  return styles.orange;
+}
+
 export default function AbstractReviewPanel({
   abstractId,
   onDecided,
 }: {
   abstractId: Id<"abstracts">;
-  onDecided: (abstractId: Id<"abstracts">) => void;
+  onDecided?: (abstractId: Id<"abstracts">) => void;
 }) {
   const detail = useQuery(api.abstracts.getForReview, { abstractId });
   const saveReview = useMutation(api.abstracts.saveReview);
@@ -50,7 +63,8 @@ export default function AbstractReviewPanel({
         decision,
       });
       if (decision) {
-        onDecided(abstractId);
+        onDecided?.(abstractId);
+        setMessage("Review decision saved.");
       } else {
         setMessage("Review notes saved.");
       }
@@ -65,21 +79,30 @@ export default function AbstractReviewPanel({
     return <LoadingScreen variant="inline" what="abstract" />;
   }
   if (detail === null) {
-    return <div className={styles.reviewState}>This abstract is no longer available for review.</div>;
+    return (
+      <div className={styles.reviewState}>
+        This abstract could not be found or is not available to review.
+      </div>
+    );
   }
 
   const privateNotes = privateNotesDraft ?? detail.abstract.privateNotes ?? "";
   const submitterFeedback =
     feedbackDraft ?? detail.abstract.submitterFeedback ?? "";
+  const canDecide = detail.abstract.status === "submitted";
 
   return (
     <div className={styles.reviewContent}>
       <section className={`${styles.card} ${styles.stack}`}>
         <div className={styles.header}>
           <div>
-            <span className={`${styles.badge} ${styles.orange}`}>Pending review</span>
+            <span
+              className={`${styles.badge} ${getStatusClass(detail.abstract.status)}`}
+            >
+              {getAbstractStatusLabel(detail.abstract.status)}
+            </span>
             <h1>{detail.abstract.title}</h1>
-            <p>{detail.abstract._id}</p>
+            <p>{detail.abstract.code}</p>
           </div>
         </div>
         <dl className={styles.meta}>
@@ -147,20 +170,32 @@ export default function AbstractReviewPanel({
             onChange={(event) => setFeedback(event.target.value)}
           />
         </label>
-        {message ? <p className={styles.error}>{message}</p> : null}
+        {message ? (
+          <p
+            className={
+              message.startsWith("Review") ? styles.success : styles.error
+            }
+          >
+            {message}
+          </p>
+        ) : null}
         <div className={styles.reviewActions}>
           <Button className="action" disabled={saving} type="button" onClick={() => void save()}>
             Save notes
           </Button>
-          <Button className="action" disabled={saving} type="button" onClick={() => void save("revision_requested")}>
-            Send back for edit
-          </Button>
-          <Button className="destructive" disabled={saving} type="button" onClick={() => void save("rejected")}>
-            Reject
-          </Button>
-          <Button className="green" disabled={saving} type="button" onClick={() => void save("selected")}>
-            Approve
-          </Button>
+          {canDecide ? (
+            <>
+              <Button className="action" disabled={saving} type="button" onClick={() => void save("revision_requested")}>
+                Send back for edit
+              </Button>
+              <Button className="destructive" disabled={saving} type="button" onClick={() => void save("rejected")}>
+                Reject
+              </Button>
+              <Button className="green" disabled={saving} type="button" onClick={() => void save("selected")}>
+                Approve
+              </Button>
+            </>
+          ) : null}
         </div>
       </section>
       <FilePreviewDrawer

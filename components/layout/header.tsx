@@ -121,6 +121,9 @@ export default function Header() {
             <span>
               <Link href="/about-us">About Us</Link>
             </span>
+            <span>
+              <Link href="/contact">Contact</Link>
+            </span>
             {user ? (
               <div className={styles.account} ref={accountRef}>
                 <Button

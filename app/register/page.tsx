@@ -1,11 +1,7 @@
 "use client";
 
 import Button from "@/components/form/button";
-import {
-  CheckboxField,
-  FormField,
-  SelectField,
-} from "@/components/form/Form";
+import { CheckboxField, FormField, SelectField } from "@/components/form/Form";
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
@@ -32,6 +28,9 @@ export default function RegisterPage() {
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [pendingPassword, setPendingPassword] = useState("");
+  const [codeSentMessage, setCodeSentMessage] = useState("");
 
   useEffect(() => {
     if (user?.profileComplete) {
@@ -64,14 +63,64 @@ export default function RegisterPage() {
     setSubmitting(true);
     payload.set("flow", "signUp");
     payload.set("agreedToTerms", String(agreedToTerms));
-    payload.set("wantsNotifications", String(payload.has("wantsNotifications")));
+    payload.set(
+      "wantsNotifications",
+      String(payload.has("wantsNotifications")),
+    );
     payload.delete("confirmPassword");
 
     try {
       await signIn("password", payload);
+      setVerificationEmail(String(payload.get("email") ?? "").trim());
+      setPendingPassword(password);
+      setCodeSentMessage("A verification code was sent to your email.");
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Could not create account",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleEmailVerification(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setCodeSentMessage("");
+    setSubmitting(true);
+    const form = new FormData(event.currentTarget);
+    form.set("flow", "email-verification");
+    form.set("email", verificationEmail);
+    try {
+      await signIn("password", form);
+      setPendingPassword("");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not verify this email",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function resendVerificationCode() {
+    setError("");
+    setCodeSentMessage("");
+    setSubmitting(true);
+    const form = new FormData();
+    form.set("flow", "signIn");
+    form.set("email", verificationEmail);
+    form.set("password", pendingPassword);
+    try {
+      await signIn("password", form);
+      setCodeSentMessage("A new verification code was sent.");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not resend the verification code",
       );
     } finally {
       setSubmitting(false);
@@ -145,6 +194,72 @@ export default function RegisterPage() {
               variant="inline"
               what={user?.profileComplete ? "your dashboard" : "your account"}
             />
+          ) : step === 1 && verificationEmail ? (
+            <form
+              className={styles.otpForm}
+              onSubmit={handleEmailVerification}
+            >
+              <section className={`${styles.card} ${styles.otpCard}`}>
+                <div className={styles.otpIcon} aria-hidden="true">
+                  <i className="bx bx-envelope" />
+                </div>
+                <div className={styles.otpHeading}>
+                  <h2>Verify your email</h2>
+                  <p>
+                    Enter the 8-digit code sent to{" "}
+                    <strong>{verificationEmail}</strong>.
+                  </p>
+                </div>
+                {codeSentMessage ? (
+                  <p className={styles.otpNotice} aria-live="polite">
+                    <i className="bx bx-check-circle" aria-hidden="true" />
+                    {codeSentMessage}
+                  </p>
+                ) : null}
+                <div className={styles.otpField}>
+                  <FormField
+                    label="Verification code"
+                    name="code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    minLength={8}
+                    maxLength={8}
+                    pattern="[0-9]{8}"
+                    placeholder="00000000"
+                    aria-describedby="verification-code-hint"
+                    required
+                  />
+                  <p id="verification-code-hint">
+                    The code expires after 15 minutes.
+                  </p>
+                </div>
+                {error ? (
+                  <p className={styles.error} role="alert">
+                    {error}
+                  </p>
+                ) : null}
+                <div className={styles.otpActions}>
+                  <Button
+                    className="primary"
+                    type="submit"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Please wait…" : "Verify email"}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={submitting || !pendingPassword}
+                    onClick={() => void resendVerificationCode()}
+                  >
+                    Resend code
+                  </Button>
+                </div>
+                <p className={styles.otpHelp}>
+                  Check your spam folder if you don&apos;t see the email.
+                </p>
+              </section>
+            </form>
           ) : step === 1 ? (
             <form className={styles.stepOne} onSubmit={handleCreateAccount}>
               <section className={styles.card}>
@@ -184,7 +299,8 @@ export default function RegisterPage() {
                     <>
                       I agree to the collection and storage of my personal
                       information,{" "}
-                      <Link href="/terms-conditions">terms and conditions</Link>.
+                      <Link href="/terms-conditions">terms and conditions</Link>
+                      .
                     </>
                   }
                 />
@@ -193,11 +309,7 @@ export default function RegisterPage() {
                   label="I want to receive notification regarding this conference via email."
                 />
                 {error ? <p className={styles.error}>{error}</p> : null}
-                <Button
-                  className="primary"
-                  type="submit"
-                  disabled={submitting}
-                >
+                <Button className="primary" type="submit" disabled={submitting}>
                   {submitting ? "Please wait…" : "Register Now"}
                 </Button>
                 <p className={styles.signIn}>
@@ -210,9 +322,7 @@ export default function RegisterPage() {
               <section className={styles.card}>
                 <h2>Personal Information</h2>
                 {user?.email ? (
-                  <p className={styles.signedInAs}>
-                    Signed in as {user.email}
-                  </p>
+                  <p className={styles.signedInAs}>Signed in as {user.email}</p>
                 ) : null}
                 <div className={styles.personalGrid}>
                   <SelectField

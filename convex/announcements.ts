@@ -10,6 +10,11 @@ import {
   announcementTagValidator,
   announcementValidator,
 } from "./lib/content";
+import { announcementEmail } from "./lib/emailTemplates";
+import {
+  createBroadcastCampaign,
+  getSiteUrl,
+} from "./notifications";
 
 type AnnouncementTag = {
   name: string;
@@ -255,6 +260,17 @@ export const publish = mutation({
     const updated = await ctx.db.get("announcements", announcement._id);
     if (!updated) {
       throw new Error("Could not publish announcement");
+    }
+    if (announcement.status !== "published") {
+      await createBroadcastCampaign(ctx, {
+        kind: "announcement",
+        content: announcementEmail({
+          title: updated.title,
+          summary: updated.summary,
+          body: updated.body,
+          url: getSiteUrl(`/announcements/${updated.slug}`),
+        }),
+      });
     }
     return updated;
   },
