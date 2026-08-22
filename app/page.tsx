@@ -123,27 +123,27 @@ export default function Home() {
             </aside>
             <div className={styles.deanBody}>
               <p>
-                Dear Students, Faculty Members, Researchers, and Guests, On
-                behalf of the Chulabhorn International College of Medicine,
-                Thammasat University,
+                Dear Students, Faculty Members, Researchers, and Guests,
                 <br />
-                We are delighted to welcome you to ASRC 2026. Research plays an
-                essential role in the advancement of medicine. However, some of
-                the most significant developments in healthcare emerge when
-                knowledge from different disciplines comes together. Under this
-                year's theme, “Medical Interdisciplinary Advancement: Bridging
-                Knowledge, Innovation, and Patient Care,” ASRC 2026 invites
-                students to explore research beyond conventional boundaries and
-                consider how medicine can interact with science, technology,
-                engineering, public health, behavioral sciences, and other
-                disciplines. Through research presentations, academic
-                discussions, and opportunities for collaboration, we hope ASRC
-                will serve as a platform where young researchers can share their
-                ideas, learn from one another, and develop the skills necessary
-                to contribute meaningfully to the future of healthcare. We look
-                forward to welcoming you to ASRC 2026 and celebrating the
-                curiosity, creativity, and research achievements of our academic
-                community.
+                <br />
+                On behalf of the Chulabhorn International College of Medicine,
+                Thammasat University, we are delighted to welcome you to ASRC
+                2026. Research plays an essential role in the advancement of
+                medicine. However, some of the most significant developments in
+                healthcare emerge when knowledge from different disciplines
+                comes together. Under this year's theme, “Medical
+                Interdisciplinary Advancement: Bridging Knowledge, Innovation,
+                and Patient Care,” ASRC 2026 invites students to explore
+                research beyond conventional boundaries and consider how
+                medicine can interact with science, technology, engineering,
+                public health, behavioral sciences, and other disciplines.
+                Through research presentations, academic discussions, and
+                opportunities for collaboration, we hope ASRC will serve as a
+                platform where young researchers can share their ideas, learn
+                from one another, and develop the skills necessary to contribute
+                meaningfully to the future of healthcare. We look forward to
+                welcoming you to ASRC 2026 and celebrating the curiosity,
+                creativity, and research achievements of our academic community.
               </p>
               <p className={styles.deanSignoff}>
                 Name
