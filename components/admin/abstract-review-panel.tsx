@@ -14,6 +14,7 @@ import { useState } from "react";
 import styles from "./admin.module.scss";
 
 type Decision = "selected" | "rejected" | "revision_requested";
+type AbstractCategory = "oral" | "poster";
 
 function getStatusClass(status: string) {
   if (status === "selected") {
@@ -39,6 +40,7 @@ export default function AbstractReviewPanel({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null);
+  const [selectedCategoryDraft, setSelectedCategory] = useState<AbstractCategory | "" | null>(null);
 
   async function save(decision?: Decision) {
     if (!detail) {
@@ -47,9 +49,14 @@ export default function AbstractReviewPanel({
     const privateNotes = privateNotesDraft ?? detail.abstract.privateNotes ?? "";
     const submitterFeedback =
       feedbackDraft ?? detail.abstract.submitterFeedback ?? "";
+    const selectedCategory = selectedCategoryDraft ?? detail.abstract.category ?? "";
 
     if (decision === "revision_requested" && !submitterFeedback.trim()) {
       setMessage("Add feedback explaining the required revisions.");
+      return;
+    }
+    if (decision === "selected" && !selectedCategory) {
+      setMessage("Select an oral or poster presentation category before approval.");
       return;
     }
 
@@ -61,6 +68,7 @@ export default function AbstractReviewPanel({
         privateNotes,
         submitterFeedback,
         decision,
+        category: decision === "selected" ? selectedCategory || undefined : undefined,
       });
       if (decision) {
         onDecided?.(abstractId);
@@ -89,6 +97,7 @@ export default function AbstractReviewPanel({
   const privateNotes = privateNotesDraft ?? detail.abstract.privateNotes ?? "";
   const submitterFeedback =
     feedbackDraft ?? detail.abstract.submitterFeedback ?? "";
+  const selectedCategory = selectedCategoryDraft ?? detail.abstract.category ?? "";
   const canDecide = detail.abstract.status === "submitted";
 
   return (
@@ -111,7 +120,15 @@ export default function AbstractReviewPanel({
             <dd>{detail.owner.name || detail.owner.email || "Unknown"}</dd>
           </div>
           <div>
-            <dt>Affiliation</dt>
+            <dt>Author(s)</dt>
+            <dd>{detail.abstract.authors || "Not provided"}</dd>
+          </div>
+          <div>
+            <dt>Faculty Advisor</dt>
+            <dd>{detail.abstract.advisor || "Not provided"}</dd>
+          </div>
+          <div>
+            <dt>Affiliations</dt>
             <dd>{detail.abstract.affiliation}</dd>
           </div>
           <div>
@@ -127,14 +144,18 @@ export default function AbstractReviewPanel({
       </section>
 
       <section className={`${styles.card} ${styles.stack}`}>
-        <h2>Supporting files</h2>
+        <h2>Submission files</h2>
         {detail.files.length === 0 ? (
           <p>No supporting files.</p>
         ) : (
           <ul className={styles.fileList}>
             {detail.files.map((file) => (
               <li key={file._id}>
-                <span>{file.fileName}</span>
+                <span>
+                  {file.kind === "supplementary" ? "Supplementary" : "Paper"}
+                  {" · "}
+                  {file.fileName}
+                </span>
                 {file.url ? (
                   <button
                     className={styles.filePreviewButton}
@@ -170,6 +191,22 @@ export default function AbstractReviewPanel({
             onChange={(event) => setFeedback(event.target.value)}
           />
         </label>
+        {canDecide ? (
+          <label>
+            Presentation category (required for selection)
+            <select
+              className={styles.select}
+              value={selectedCategory}
+              onChange={(event) =>
+                setSelectedCategory(event.target.value as AbstractCategory | "")
+              }
+            >
+              <option value="">Select a category</option>
+              <option value="oral">Oral presentation</option>
+              <option value="poster">Poster presentation</option>
+            </select>
+          </label>
+        ) : null}
         {message ? (
           <p
             className={
@@ -192,7 +229,7 @@ export default function AbstractReviewPanel({
                 Reject
               </Button>
               <Button className="green" disabled={saving} type="button" onClick={() => void save("selected")}>
-                Approve
+                Select for presentation
               </Button>
             </>
           ) : null}

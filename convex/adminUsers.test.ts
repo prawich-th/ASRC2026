@@ -114,6 +114,37 @@ describe("admin user import and search", () => {
       "participant@example.com",
     );
   });
+
+  test("only super admins can waive a registration fee", async () => {
+    const { t, ids, admin, participant } = await setupAdmin();
+    await expect(
+      participant.mutation(api.adminUsers.setRegistrationFeeWaiver, {
+        userId: ids.participant,
+        waived: true,
+      }),
+    ).rejects.toThrow("Unauthorized");
+
+    const waived = await admin.mutation(
+      api.adminUsers.setRegistrationFeeWaiver,
+      { userId: ids.participant, waived: true },
+    );
+    expect(waived.registrationFeeWaived).toBe(true);
+    expect(waived.registrationFeeWaivedBy).toBe(ids.admin);
+    expect(waived.registrationFeeWaivedAt).toEqual(expect.any(Number));
+
+    const restored = await admin.mutation(
+      api.adminUsers.setRegistrationFeeWaiver,
+      { userId: ids.participant, waived: false },
+    );
+    expect(restored.registrationFeeWaived).toBeUndefined();
+    expect(restored.registrationFeeWaivedBy).toBeUndefined();
+    expect(restored.registrationFeeWaivedAt).toBeUndefined();
+
+    const stored = await t.run(async (ctx) => {
+      return await ctx.db.get("users", ids.participant);
+    });
+    expect(stored?.registrationFeeWaived).toBeUndefined();
+  });
 });
 
 test("verified users claim matching pre-registered profiles", async () => {

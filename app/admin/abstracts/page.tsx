@@ -6,6 +6,7 @@ import Button from "@/components/form/button";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { getCategoryLabel } from "@/lib/abstractDisplay";
 import { usePaginatedQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -79,7 +80,7 @@ function ReviewQueue() {
                   <strong>{item.abstract.title}</strong>
                   <span>{item.abstract.code}</span>
                   <span>{item.owner.name || item.owner.email || "Unknown"}</span>
-                  <small>{item.abstract.category} presentation</small>
+                  <small>{getCategoryLabel(item.abstract.category)}</small>
                 </button>
               </li>
             ))}

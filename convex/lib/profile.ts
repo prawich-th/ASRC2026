@@ -61,6 +61,9 @@ export const userFields = {
   preRegisteredAt: v.optional(v.number()),
   preRegisteredBy: v.optional(v.id("users")),
   claimedAt: v.optional(v.number()),
+  registrationFeeWaived: v.optional(v.boolean()),
+  registrationFeeWaivedAt: v.optional(v.number()),
+  registrationFeeWaivedBy: v.optional(v.id("users")),
 };
 
 export const userValidator = v.object({

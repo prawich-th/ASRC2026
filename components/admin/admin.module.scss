@@ -164,6 +164,100 @@
   }
 }
 
+.userTable {
+  min-width: 64rem;
+
+  th,
+  td {
+    vertical-align: middle;
+  }
+
+  th:first-child,
+  td:first-child {
+    width: 30%;
+  }
+}
+
+.participantCell {
+  min-width: 18rem;
+}
+
+.userIdentity {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.userAvatarFrame {
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eee9e2;
+  box-shadow: inset 0 0 0 1px rgba(66, 57, 47, 0.08);
+}
+
+.userAvatar,
+.userAvatarFallback {
+  width: 100%;
+  height: 100%;
+}
+
+.userAvatar {
+  display: block;
+  object-fit: cover;
+}
+
+.userAvatarFallback {
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--green) 12%, white);
+  color: var(--green);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.userIdentityText,
+.organizationCell {
+  min-width: 0;
+
+  strong,
+  span,
+  a {
+    display: block;
+  }
+
+  strong {
+    color: #25221e;
+    line-height: 1.3;
+  }
+
+  span,
+  a {
+    margin-top: 0.16rem;
+    color: #6b655d;
+    font-size: 0.84rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+}
+
+.userIdentityText a {
+  font-weight: 500;
+}
+
+.organizationCell {
+  min-width: 12rem;
+}
+
+.statusStack {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -189,6 +283,131 @@
     background: #f5dce4;
     color: var(--tu-red);
   }
+}
+
+.feeStatusButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.25rem 0.7rem rgba(0, 0, 0, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--orange) 35%, transparent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+
+  &.required {
+    border-color: #e4c7b4;
+    background: #f9eee7;
+    color: #91471e;
+  }
+
+  &.waived {
+    border-color: #b9d9cd;
+    background: #e1f0ea;
+    color: var(--green);
+  }
+
+  &.paid {
+    border-color: #b8d7c8;
+    background: #dcece6;
+    color: #075c41;
+  }
+}
+
+.modalLayer {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.modalBackdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(29, 25, 20, 0.48);
+  backdrop-filter: blur(2px);
+  cursor: default;
+}
+
+.confirmationModal {
+  position: relative;
+  width: min(100%, 31rem);
+  border-radius: 0.9rem;
+  background: white;
+  box-shadow: 0 1.5rem 4rem rgba(25, 20, 15, 0.2);
+  padding: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.modalIcon {
+  flex: 0 0 auto;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #f7e9df;
+  color: var(--orange);
+
+  i {
+    font-size: 1.5rem;
+  }
+}
+
+.modalContent {
+  min-width: 0;
+  flex: 1;
+
+  h2 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  > p {
+    margin: 0.65rem 0 0;
+    color: #5e5951;
+    line-height: 1.55;
+  }
+}
+
+.modalActions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 
 .meta {

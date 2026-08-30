@@ -52,12 +52,12 @@ export function getAbstractStatusMessage(status: AbstractStatus): string {
   }
 }
 
-export function getCategoryLabel(category: string): string {
+export function getCategoryLabel(category?: string): string {
   if (category === "oral") {
     return "Oral Presentation";
   }
   if (category === "poster") {
     return "Poster Presentation";
   }
-  return category;
+  return category || "To be assigned";
 }

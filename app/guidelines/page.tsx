@@ -115,7 +115,7 @@ export default function GuidelinesPage() {
       </ol>
 
       <h3>Keywords</h3>
-      <p>Provide approximately 3–5 keywords describing the research.</p>
+      <p>Provide relevant keywords describing the research.</p>
 
       <h2>File Submission Requirements</h2>
       <p>The final submission must be uploaded in PDF format.</p>

@@ -1,11 +1,18 @@
 import {
+  PaginationResult,
   paginationOptsValidator,
   paginationResultValidator,
 } from "convex/server";
 import { v } from "convex/values";
 import { buildDisplayName, buildUserSearchText, normalizeEmail } from "../lib/userData";
 import { internal } from "./_generated/api";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { Doc } from "./_generated/dataModel";
+import {
+  internalMutation,
+  mutation,
+  query,
+  QueryCtx,
+} from "./_generated/server";
 import { requireRole } from "./lib/auth";
 import {
   participantCategoryValidator,
@@ -13,6 +20,46 @@ import {
   userRoleValidator,
   userValidator,
 } from "./lib/profile";
+import { hasPaidRegistrationFee } from "./lib/registrationPayment";
+
+const registrationFeeStatusValidator = v.union(
+  v.literal("required"),
+  v.literal("waived"),
+  v.literal("paid"),
+);
+
+const adminUserValidator = userValidator.extend({
+  registrationFeeStatus: registrationFeeStatusValidator,
+});
+
+async function addRegistrationFeeStatuses(
+  ctx: QueryCtx,
+  result: PaginationResult<Doc<"users">>,
+) {
+  const page = await Promise.all(
+    result.page.map(async (user) => {
+      const profileImageUrl = user.profileImageId
+        ? await ctx.storage.getUrl(user.profileImageId)
+        : null;
+      const userWithImage = {
+        ...user,
+        image: profileImageUrl ?? user.image,
+      };
+      if (user.registrationFeeWaived === true) {
+        return {
+          ...userWithImage,
+          registrationFeeStatus: "waived" as const,
+        };
+      }
+      const paid = await hasPaidRegistrationFee(ctx, user._id);
+      return {
+        ...userWithImage,
+        registrationFeeStatus: paid ? ("paid" as const) : ("required" as const),
+      };
+    }),
+  );
+  return { ...result, page };
+}
 
 const importUserValidator = v.object({
   email: v.string(),
@@ -57,34 +104,41 @@ export const list = query({
     role: v.optional(userRoleValidator),
     search: v.optional(v.string()),
   },
-  returns: paginationResultValidator(userValidator),
+  returns: paginationResultValidator(adminUserValidator),
   handler: async (ctx, args) => {
     await requireRole(ctx, ["super_admin"]);
     const search = args.search?.trim();
     if (search) {
       if (args.role !== undefined) {
-        return await ctx.db
+        const result = await ctx.db
           .query("users")
           .withSearchIndex("search_users", (q) =>
             q.search("searchText", search).eq("role", args.role),
           )
           .paginate(args.paginationOpts);
+        return await addRegistrationFeeStatuses(ctx, result);
       }
-      return await ctx.db
+      const result = await ctx.db
         .query("users")
         .withSearchIndex("search_users", (q) =>
           q.search("searchText", search),
         )
         .paginate(args.paginationOpts);
+      return await addRegistrationFeeStatuses(ctx, result);
     }
     if (args.role !== undefined) {
-      return await ctx.db
+      const result = await ctx.db
         .query("users")
         .withIndex("by_role", (q) => q.eq("role", args.role))
         .order("asc")
         .paginate(args.paginationOpts);
+      return await addRegistrationFeeStatuses(ctx, result);
     }
-    return await ctx.db.query("users").order("asc").paginate(args.paginationOpts);
+    const result = await ctx.db
+      .query("users")
+      .order("asc")
+      .paginate(args.paginationOpts);
+    return await addRegistrationFeeStatuses(ctx, result);
   },
 });
 
@@ -313,6 +367,32 @@ export const setRole = mutation({
     const updated = await ctx.db.get("users", target._id);
     if (!updated) {
       throw new Error("Could not update user role");
+    }
+    return updated;
+  },
+});
+
+export const setRegistrationFeeWaiver = mutation({
+  args: {
+    userId: v.id("users"),
+    waived: v.boolean(),
+  },
+  returns: userValidator,
+  handler: async (ctx, args) => {
+    const currentUser = await requireRole(ctx, ["super_admin"]);
+    const target = await ctx.db.get("users", args.userId);
+    if (!target) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch("users", target._id, {
+      registrationFeeWaived: args.waived || undefined,
+      registrationFeeWaivedAt: args.waived ? Date.now() : undefined,
+      registrationFeeWaivedBy: args.waived ? currentUser._id : undefined,
+    });
+    const updated = await ctx.db.get("users", target._id);
+    if (!updated) {
+      throw new Error("Could not update registration fee waiver");
     }
     return updated;
   },

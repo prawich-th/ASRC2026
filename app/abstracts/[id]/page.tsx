@@ -105,7 +105,7 @@ export default function AbstractViewPage() {
                   <span>{getCategoryLabel(detail.abstract.category)}</span>
                 </li>
                 <li>
-                  <strong>Affiliation</strong>
+                  <strong>Affiliations</strong>
                   <span>{detail.abstract.affiliation}</span>
                 </li>
               </ul>
@@ -148,7 +148,7 @@ export default function AbstractViewPage() {
 
           <section className={styles.card}>
             <div className={styles.headerRow}>
-              <h2>Abstract</h2>
+              <h2>Submission Content</h2>
               {detail.abstract.status === "draft" ||
               detail.abstract.status === "revision_requested" ? (
                 <Link href={`/abstracts/${detail.abstract._id}/edit`}>
@@ -160,7 +160,16 @@ export default function AbstractViewPage() {
                 </Link>
               ) : null}
             </div>
-            <p>{detail.abstract.body}</p>
+            <h2>Authors</h2>
+            <p className={styles.preserveLines}>
+              {detail.abstract.authors || "Not provided"}
+            </p>
+            <h2>Faculty Advisor</h2>
+            <p className={styles.preserveLines}>
+              {detail.abstract.advisor || "Not provided"}
+            </p>
+            <h2>Abstract Content</h2>
+            <p className={styles.preserveLines}>{detail.abstract.body}</p>
 
             <h2>Keywords</h2>
             <p className={styles.keywordsPreview}>
@@ -171,7 +180,7 @@ export default function AbstractViewPage() {
           </section>
 
           <section className={styles.card}>
-            <h2>Supporting Files</h2>
+            <h2>Submission Files</h2>
             {detail.files.length > 0 ? (
               <ul className={styles.supportingList}>
                 {detail.files.map((file) => (
@@ -182,6 +191,9 @@ export default function AbstractViewPage() {
                     />
                     <div className={styles.content}>
                       <strong>{file.fileName}</strong>
+                      <span className={styles.fileKind}>
+                        {file.kind === "supplementary" ? "Supplementary" : "Paper"}
+                      </span>
                       <span>
                         Uploaded: {formatDate(file.uploadedAt)} (
                         {Math.ceil(file.size / 1024)} KB)
@@ -202,7 +214,7 @@ export default function AbstractViewPage() {
                 ))}
               </ul>
             ) : (
-              <p className={styles.emptyState}>No supporting files uploaded.</p>
+              <p className={styles.emptyState}>No files uploaded.</p>
             )}
           </section>
         </div>

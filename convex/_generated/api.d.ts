@@ -13,6 +13,8 @@ import type * as abstracts from "../abstracts.js";
 import type * as adminUsers from "../adminUsers.js";
 import type * as announcements from "../announcements.js";
 import type * as auth from "../auth.js";
+import type * as billing from "../billing.js";
+import type * as billingQueries from "../billingQueries.js";
 import type * as http from "../http.js";
 import type * as keyDates from "../keyDates.js";
 import type * as lib_abstract from "../lib/abstract.js";
@@ -22,6 +24,7 @@ import type * as lib_emailTemplates from "../lib/emailTemplates.js";
 import type * as lib_notification from "../lib/notification.js";
 import type * as lib_preRegistration from "../lib/preRegistration.js";
 import type * as lib_profile from "../lib/profile.js";
+import type * as lib_registrationPayment from "../lib/registrationPayment.js";
 import type * as notifications from "../notifications.js";
 import type * as users from "../users.js";
 
@@ -37,6 +40,8 @@ declare const fullApi: ApiFromModules<{
   adminUsers: typeof adminUsers;
   announcements: typeof announcements;
   auth: typeof auth;
+  billing: typeof billing;
+  billingQueries: typeof billingQueries;
   http: typeof http;
   keyDates: typeof keyDates;
   "lib/abstract": typeof lib_abstract;
@@ -46,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/notification": typeof lib_notification;
   "lib/preRegistration": typeof lib_preRegistration;
   "lib/profile": typeof lib_profile;
+  "lib/registrationPayment": typeof lib_registrationPayment;
   notifications: typeof notifications;
   users: typeof users;
 }>;
@@ -78,4 +84,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+  stripe: import("@convex-dev/stripe/_generated/component.js").ComponentApi<"stripe">;
 };

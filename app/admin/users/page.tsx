@@ -1,6 +1,9 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
+import RegistrationFeeDialog, {
+  RegistrationFeeDialogUser,
+} from "@/components/admin/registration-fee-dialog";
 import Button from "@/components/form/button";
 import {
   FileUploadField,
@@ -18,7 +21,29 @@ import {
   UserImportError,
 } from "@/lib/userImport";
 import { useMutation, usePaginatedQuery } from "convex/react";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
+
+type SelectedFeeUser = RegistrationFeeDialogUser & {
+  userId: Id<"users">;
+};
+
+function getInitials(user: {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+}): string {
+  const parts = [user.firstName, user.lastName].filter((part): part is string =>
+    Boolean(part?.trim()),
+  );
+  if (parts.length === 0) {
+    parts.push(...(user.name ?? user.email ?? "User").trim().split(/\s+/));
+  }
+  return parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
 
 export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
@@ -33,9 +58,15 @@ export default function AdminUsersPage() {
     { initialNumItems: 25 },
   );
   const setUserRole = useMutation(api.adminUsers.setRole);
+  const setRegistrationFeeWaiver = useMutation(
+    api.adminUsers.setRegistrationFeeWaiver,
+  );
   const importPreRegistered = useMutation(api.adminUsers.importPreRegistered);
   const [savingId, setSavingId] = useState<Id<"users"> | null>(null);
   const [error, setError] = useState("");
+  const [selectedFeeUser, setSelectedFeeUser] =
+    useState<SelectedFeeUser | null>(null);
+  const [feeDialogError, setFeeDialogError] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importUsers, setImportUsers] = useState<ImportedUser[]>([]);
@@ -64,7 +95,38 @@ export default function AdminUsersPage() {
         role: value ? (value as StaffRole) : null,
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not update role.");
+      setError(
+        caught instanceof Error ? caught.message : "Could not update role.",
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  const closeFeeDialog = useCallback(() => {
+    setSelectedFeeUser(null);
+    setFeeDialogError("");
+  }, []);
+
+  async function confirmFeeWaiverChange() {
+    if (!selectedFeeUser || selectedFeeUser.status === "paid") {
+      return;
+    }
+    const waived = selectedFeeUser.status === "required";
+    setFeeDialogError("");
+    setSavingId(selectedFeeUser.userId);
+    try {
+      await setRegistrationFeeWaiver({
+        userId: selectedFeeUser.userId,
+        waived,
+      });
+      closeFeeDialog();
+    } catch (caught) {
+      setFeeDialogError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not update registration fee waiver.",
+      );
     } finally {
       setSavingId(null);
     }
@@ -275,49 +337,119 @@ export default function AdminUsersPage() {
         <LoadingScreen variant="inline" what="users" />
       ) : (
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
+          <table className={`${styles.table} ${styles.userTable}`}>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Institution</th>
-                <th>Profile</th>
-                <th>Account</th>
-                <th>Role</th>
+                <th>Participant</th>
+                <th>Organization</th>
+                <th>Status</th>
+                <th>Registration Fee</th>
+                <th>Access</th>
               </tr>
             </thead>
             <tbody>
               {results.map((user) => (
                 <tr key={user._id}>
-                  <td>
-                    <strong>{user.name || user.email || "Unnamed user"}</strong>
+                  <td className={styles.participantCell}>
+                    <div className={styles.userIdentity}>
+                      <div className={styles.userAvatarFrame}>
+                        {user.image ? (
+                          // Convex storage URLs can be signed and should load directly.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            className={styles.userAvatar}
+                            src={user.image}
+                            alt=""
+                          />
+                        ) : (
+                          <span
+                            className={styles.userAvatarFallback}
+                            aria-hidden="true"
+                          >
+                            {getInitials(user)}
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.userIdentityText}>
+                        <strong>
+                          {user.name || user.email || "Unnamed user"}
+                        </strong>
+                        {user.email ? (
+                          <a href={`mailto:${user.email}`}>{user.email}</a>
+                        ) : (
+                          <span>No email address</span>
+                        )}
+                        {user.phone ? <span>{user.phone}</span> : null}
+                      </div>
+                    </div>
+                  </td>
+                  <td className={styles.organizationCell}>
+                    <strong>{user.institution ?? "Not provided"}</strong>
+                    {user.department ? <span>{user.department}</span> : null}
+                    {user.participantCategory ? (
+                      <span>{user.participantCategory}</span>
+                    ) : null}
                   </td>
                   <td>
-                    {user.email ?? "—"}
-                    <br />
-                    {user.phone ?? ""}
+                    <div className={styles.statusStack}>
+                      <span
+                        className={`${styles.badge} ${
+                          user.profileComplete ? styles.green : styles.orange
+                        }`}
+                      >
+                        Profile{" "}
+                        {user.profileComplete ? "complete" : "incomplete"}
+                      </span>
+                      <span
+                        className={`${styles.badge} ${
+                          user.preRegisteredAt && !user.claimedAt
+                            ? styles.orange
+                            : styles.green
+                        }`}
+                      >
+                        {user.preRegisteredAt && !user.claimedAt
+                          ? "Awaiting signup"
+                          : "Registered"}
+                      </span>
+                    </div>
                   </td>
                   <td>
-                    {user.institution ?? "—"}
-                    {user.department ? <><br />{user.department}</> : null}
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${user.profileComplete ? styles.green : styles.orange}`}>
-                      {user.profileComplete ? "Complete" : "Incomplete"}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className={`${styles.badge} ${
-                        user.preRegisteredAt && !user.claimedAt
-                          ? styles.orange
-                          : styles.green
+                    <button
+                      className={`${styles.feeStatusButton} ${
+                        styles[user.registrationFeeStatus]
                       }`}
+                      type="button"
+                      disabled={savingId === user._id}
+                      aria-label={`Registration fee status for ${
+                        user.name || user.email || "user"
+                      }: ${user.registrationFeeStatus}`}
+                      onClick={() => {
+                        setFeeDialogError("");
+                        setSelectedFeeUser({
+                          userId: user._id,
+                          label: user.name || user.email || "this user",
+                          status: user.registrationFeeStatus,
+                        });
+                      }}
                     >
-                      {user.preRegisteredAt && !user.claimedAt
-                        ? "Awaiting signup"
-                        : "Registered"}
-                    </span>
+                      <i
+                        className={`bx ${
+                          user.registrationFeeStatus === "paid"
+                            ? "bx-check-circle"
+                            : user.registrationFeeStatus === "waived"
+                              ? "bx-shield-quarter"
+                              : "bx-clock"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span>
+                        {user.registrationFeeStatus === "paid"
+                          ? "Paid"
+                          : user.registrationFeeStatus === "waived"
+                            ? "Waived"
+                            : "Required"}
+                      </span>
+                    </button>
                   </td>
                   <td>
                     <select
@@ -325,7 +457,9 @@ export default function AdminUsersPage() {
                       aria-label={`Role for ${user.name || user.email || "user"}`}
                       disabled={savingId === user._id}
                       value={user.role ?? ""}
-                      onChange={(event) => void changeRole(user._id, event.target.value)}
+                      onChange={(event) =>
+                        void changeRole(user._id, event.target.value)
+                      }
                     >
                       <option value="">{getRoleLabel()}</option>
                       {STAFF_ROLES.map((role) => (
@@ -339,7 +473,7 @@ export default function AdminUsersPage() {
               ))}
               {results.length === 0 ? (
                 <tr>
-                  <td className={styles.empty} colSpan={6}>
+                  <td className={styles.empty} colSpan={5}>
                     {debouncedSearch
                       ? "No users match your search."
                       : "No users found."}
@@ -362,6 +496,13 @@ export default function AdminUsersPage() {
           </Button>
         </div>
       ) : null}
+      <RegistrationFeeDialog
+        user={selectedFeeUser}
+        error={feeDialogError}
+        saving={selectedFeeUser !== null && savingId === selectedFeeUser.userId}
+        onConfirm={() => void confirmFeeWaiverChange()}
+        onClose={closeFeeDialog}
+      />
     </section>
   );
 }

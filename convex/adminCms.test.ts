@@ -16,6 +16,7 @@ async function seedUsers() {
       name: "Participant",
       email: "delivered+participant@resend.dev",
       wantsNotifications: true,
+      registrationFeeWaived: true,
     });
     const staff = await ctx.db.insert("users", {
       name: "Staff",
@@ -183,17 +184,26 @@ describe("tiered administration", () => {
       }),
     ).rejects.toThrow("Unauthorized");
 
+    await expect(
+      academic.mutation(api.abstracts.saveReview, {
+        abstractId,
+        decision: "selected",
+      }),
+    ).rejects.toThrow("Select an oral or poster presentation category");
+
     await academic.mutation(api.abstracts.saveReview, {
       abstractId,
       privateNotes: "Internal scoring note",
       submitterFeedback: "Strong submission.",
       decision: "selected",
+      category: "oral",
     });
 
     const ownerView = await participant.query(api.abstracts.getMineById, {
       abstractId,
     });
     expect(ownerView?.abstract.status).toBe("selected");
+    expect(ownerView?.abstract.category).toBe("oral");
     expect(ownerView?.abstract.submitterFeedback).toBe("Strong submission.");
     expect(ownerView?.abstract).not.toHaveProperty("privateNotes");
   });
@@ -208,13 +218,50 @@ describe("tiered administration", () => {
     const participant = t.withIdentity({ subject: ids.participant });
     const draft = await participant.mutation(api.abstracts.createDraft, {
       title: "Transactional Receipt Study",
+      authors: "Arun Researcher",
+      advisor: "Dr Faculty Advisor",
       body: "Completed abstract body",
-      keywords: ["email"],
-      category: "poster",
+      keywords: ["email", "notification", "research"],
       affiliation: "CICM",
       affiliationDeclared: true,
     });
     expect(draft.code).toMatch(/^\d{6}$/);
+
+    await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(
+        new Blob(["supplement"], { type: "application/pdf" }),
+      );
+      await ctx.db.insert("abstractFiles", {
+        ownerId: ids.participant,
+        abstractId: draft._id,
+        storageId,
+        fileName: "supplement.pdf",
+        kind: "supplementary",
+        contentType: "application/pdf",
+        size: 10,
+        uploadedAt: 90,
+      });
+    });
+
+    await expect(
+      participant.mutation(api.abstracts.submitDraft, { abstractId: draft._id }),
+    ).rejects.toThrow("upload the completed paper as a PDF");
+
+    await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(
+        new Blob(["paper"], { type: "application/pdf" }),
+      );
+      await ctx.db.insert("abstractFiles", {
+        ownerId: ids.participant,
+        abstractId: draft._id,
+        storageId,
+        fileName: "paper.pdf",
+        kind: "paper",
+        contentType: "application/pdf",
+        size: 5,
+        uploadedAt: 100,
+      });
+    });
 
     const submitted = await participant.mutation(
       api.abstracts.submitDraft,
@@ -256,6 +303,8 @@ describe("tiered administration", () => {
         ownerId: ids.participant,
         code: "100003",
         title: "Revision Study",
+        authors: "Arun Researcher",
+        advisor: "Dr Faculty Advisor",
         body: "Original body",
         keywords: ["research"],
         category: "poster",
@@ -293,11 +342,27 @@ describe("tiered administration", () => {
     await participant.mutation(api.abstracts.updateDraft, {
       abstractId,
       title: "Revision Study",
+      authors: "Arun Researcher",
+      advisor: "Dr Faculty Advisor",
       body: "Revised body with clearer methods",
-      keywords: ["research", "methods"],
-      category: "poster",
+      keywords: ["research", "methods", "revision"],
       affiliation: "CICM",
       affiliationDeclared: true,
+    });
+    await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(
+        new Blob(["paper"], { type: "application/pdf" }),
+      );
+      await ctx.db.insert("abstractFiles", {
+        ownerId: ids.participant,
+        abstractId,
+        storageId,
+        fileName: "revised-paper.pdf",
+        kind: "paper",
+        contentType: "application/pdf",
+        size: 5,
+        uploadedAt: 200,
+      });
     });
     const resubmitted = await participant.mutation(api.abstracts.submitDraft, {
       abstractId,

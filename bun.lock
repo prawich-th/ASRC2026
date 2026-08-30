@@ -8,6 +8,7 @@
         "@auth/core": "^0.41.3",
         "@convex-dev/auth": "0.0.90",
         "@convex-dev/resend": "^0.2.7",
+        "@convex-dev/stripe": "^0.1.4",
         "@oslojs/crypto": "^1.0.1",
         "@uiw/react-md-editor": "^4.1.2",
         "convex": "^1.44.0",
@@ -86,6 +87,8 @@
     "@convex-dev/rate-limiter": ["@convex-dev/rate-limiter@0.3.2", "", { "peerDependencies": { "convex": "^1.24.8", "react": "^18.2.0 || ^19.0.0" }, "optionalPeers": ["react"] }, "sha512-+oBPsBfFbzdxiF/9XaaTQmVnvDlvEfg/c69/v8LxTbw4VLuiflIKlfnPQL8OS0azXQQ11hcPWHmU8ytFmHKDXA=="],
 
     "@convex-dev/resend": ["@convex-dev/resend@0.2.7", "", { "dependencies": { "@convex-dev/rate-limiter": "^0.3.0", "@convex-dev/workpool": "^0.4.10", "remeda": "^2.26.0", "resend": "^6.6.0", "svix": "^1.70.0" }, "peerDependencies": { "convex": "^1.43.0", "convex-helpers": "^0.1.106" } }, "sha512-n5KTnTKEGPI2vwCS2WqSXITvkUmEk0vGOuB9beAeBMmsK53Y/O0+KDjPINVy1EW4jAtnByFbAqgwyt20humdDQ=="],
+
+    "@convex-dev/stripe": ["@convex-dev/stripe@0.1.6", "", { "dependencies": { "stripe": "^22.2.1" }, "peerDependencies": { "convex": "^1.29.3", "react": "^18.3.1 || ^19.0.0" } }, "sha512-6+DLM6QDLiFYeBKwJGlPrpm9tgZKe/EWlTYcbLyIKqS5q4xZHjTsyvFE98TD0hPLfniVVoD+/rO+PAnhSsNXkg=="],
 
     "@convex-dev/workpool": ["@convex-dev/workpool@0.4.10", "", { "dependencies": { "@convex-dev/batch-worker": "^0.2.1" }, "peerDependencies": { "convex": "^1.36.1", "convex-helpers": "^0.1.94" } }, "sha512-wJTSZ3vmGIfR1enEzttlDq6YtXr/hmJr8DO3sa2v861WHOL1zyyXfWuvrHQiDuOOVryQJujqKc8VcH1IJ4um5g=="],
 
@@ -1298,6 +1301,8 @@
     "strip-bom": ["strip-bom@3.0.0", "", {}, "sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA=="],
 
     "strip-json-comments": ["strip-json-comments@3.1.1", "", {}, "sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig=="],
+
+    "stripe": ["stripe@22.6.0", "", { "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-Ezk+WYEEwX2DLxFrKfb6coznlCMZvCaCYMNPXNHFSZkBIEzF5Hgm7RLb38q/0h9Ol5jsUJGJRorvhzAvckgfhw=="],
 
     "style-to-js": ["style-to-js@1.1.21", "", { "dependencies": { "style-to-object": "1.0.14" } }, "sha512-RjQetxJrrUJLQPHbLku6U/ocGtzyjbJMP9lCNK7Ag0CNh690nSH8woqWH9u16nMjYBAok+i7JO1NP2pOy8IsPQ=="],
 

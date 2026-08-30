@@ -17,6 +17,7 @@ import {
   abstractDetailValidator,
   abstractFileValidator,
   abstractFileWithUrlValidator,
+  abstractFileKindValidator,
   abstractSummaryValidator,
   abstractValidator,
   adminAbstractDetailValidator,
@@ -24,6 +25,7 @@ import {
   adminAbstractValidator,
 } from "./lib/abstract";
 import { getCurrentUser, requireRole } from "./lib/auth";
+import { canSubmitAbstract } from "./lib/registrationPayment";
 import {
   abstractDecisionEmail,
   abstractSubmissionEmail,
@@ -81,6 +83,8 @@ function toOwnerAbstract(abstract: Doc<"abstracts">) {
     ownerId: abstract.ownerId,
     code: abstract.code ?? "",
     title: abstract.title,
+    authors: abstract.authors,
+    advisor: abstract.advisor,
     body: abstract.body,
     keywords: abstract.keywords,
     category: abstract.category,
@@ -108,8 +112,7 @@ function toAbstractOwner(user: Doc<"users">) {
 function normalizeKeywords(keywords: string[]): string[] {
   return keywords
     .map((keyword) => keyword.trim())
-    .filter((keyword) => keyword.length > 0)
-    .slice(0, 20);
+    .filter((keyword) => keyword.length > 0);
 }
 
 function canOwnerEdit(status: Doc<"abstracts">["status"]): boolean {
@@ -201,9 +204,10 @@ export const listFilesForAbstract = query({
 export const createDraft = mutation({
   args: {
     title: v.string(),
+    authors: v.string(),
+    advisor: v.string(),
     body: v.string(),
     keywords: v.array(v.string()),
-    category: abstractCategoryValidator,
     affiliation: v.string(),
     affiliationDeclared: v.boolean(),
   },
@@ -216,9 +220,10 @@ export const createDraft = mutation({
       ownerId: user._id,
       code: await allocateAbstractCode(ctx),
       title: args.title.trim(),
+      authors: args.authors.trim(),
+      advisor: args.advisor.trim(),
       body: args.body.trim(),
       keywords,
-      category: args.category,
       affiliation: args.affiliation.trim(),
       affiliationDeclared: args.affiliationDeclared,
       status: "draft",
@@ -238,9 +243,10 @@ export const updateDraft = mutation({
   args: {
     abstractId: v.id("abstracts"),
     title: v.string(),
+    authors: v.string(),
+    advisor: v.string(),
     body: v.string(),
     keywords: v.array(v.string()),
-    category: abstractCategoryValidator,
     affiliation: v.string(),
     affiliationDeclared: v.boolean(),
   },
@@ -254,9 +260,10 @@ export const updateDraft = mutation({
 
     await ctx.db.patch("abstracts", abstract._id, {
       title: args.title.trim(),
+      authors: args.authors.trim(),
+      advisor: args.advisor.trim(),
       body: args.body.trim(),
       keywords: normalizeKeywords(args.keywords),
-      category: args.category,
       affiliation: args.affiliation.trim(),
       affiliationDeclared: args.affiliationDeclared,
       updatedAt: Date.now(),
@@ -281,11 +288,38 @@ export const submitDraft = mutation({
     if (!canOwnerEdit(abstract.status)) {
       throw new Error("Only drafts or revision requests can be submitted");
     }
-    if (!abstract.title.trim() || !abstract.body.trim()) {
+    if (
+      !abstract.title.trim() ||
+      !abstract.authors?.trim() ||
+      !abstract.advisor?.trim() ||
+      !abstract.body.trim()
+    ) {
       throw new Error("Please complete all required abstract fields");
+    }
+    if (abstract.keywords.length === 0) {
+      throw new Error("Please provide at least one keyword");
     }
     if (!abstract.affiliationDeclared) {
       throw new Error("Please declare your affiliation before submission");
+    }
+    const paperFiles = await ctx.db
+      .query("abstractFiles")
+      .withIndex("by_abstractId", (q) => q.eq("abstractId", abstract._id))
+      .take(100);
+    if (
+      !paperFiles.some(
+        (file) =>
+          file.fileName.toLocaleLowerCase().endsWith(".pdf") &&
+          (file.kind === "paper" || file.kind === undefined),
+      )
+    ) {
+      throw new Error("Please upload the completed paper as a PDF before submission");
+    }
+    const registration = await canSubmitAbstract(ctx, user);
+    if (!registration.eligible) {
+      throw new Error(
+        "Pay the registration fee before submitting your abstract, or contact an administrator if your fee should be waived",
+      );
     }
 
     const now = Date.now();
@@ -329,6 +363,7 @@ export const attachUploadedFile = mutation({
     abstractId: v.id("abstracts"),
     storageId: v.id("_storage"),
     fileName: v.string(),
+    kind: abstractFileKindValidator,
   },
   returns: abstractFileValidator,
   handler: async (ctx, args) => {
@@ -345,12 +380,39 @@ export const attachUploadedFile = mutation({
     if (!metadata) {
       throw new Error("Uploaded file was not found");
     }
+    const normalizedFileName = args.fileName.trim().toLocaleLowerCase();
+    const supplementaryExtensions = [
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".xls",
+      ".xlsx",
+      ".csv",
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".zip",
+    ];
+    if (args.kind === "paper" && !normalizedFileName.endsWith(".pdf")) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("The paper file must be uploaded as a PDF");
+    }
+    if (
+      args.kind === "supplementary" &&
+      !supplementaryExtensions.some((extension) =>
+        normalizedFileName.endsWith(extension),
+      )
+    ) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("This supplementary file format is not supported");
+    }
 
     const fileId = await ctx.db.insert("abstractFiles", {
       ownerId: user._id,
       abstractId: args.abstractId,
       storageId: args.storageId,
       fileName: args.fileName.trim(),
+      kind: args.kind,
       contentType: metadata.contentType,
       size: metadata.size,
       uploadedAt: Date.now(),
@@ -474,6 +536,7 @@ export const saveReview = mutation({
         v.literal("revision_requested"),
       ),
     ),
+    category: v.optional(abstractCategoryValidator),
   },
   returns: adminAbstractValidator,
   handler: async (ctx, args) => {
@@ -494,11 +557,15 @@ export const saveReview = mutation({
     if (args.decision === "revision_requested" && !submitterFeedback) {
       throw new Error("Submitter feedback is required when requesting revisions");
     }
+    if (args.decision === "selected" && args.category === undefined) {
+      throw new Error("Select an oral or poster presentation category");
+    }
     const now = Date.now();
     const code = await ensureAbstractCode(ctx, abstract);
     await ctx.db.patch("abstracts", abstract._id, {
       privateNotes,
       submitterFeedback,
+      category: args.decision === "selected" ? args.category : abstract.category,
       status: args.decision ?? abstract.status,
       reviewedBy: reviewer._id,
       reviewedAt: now,

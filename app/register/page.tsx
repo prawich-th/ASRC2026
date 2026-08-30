@@ -8,7 +8,13 @@ import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { PARTICIPANT_CATEGORIES, PREFIXES } from "@/lib/formOptions";
+import {
+  MEDICAL_STUDENT_INSTITUTIONS,
+  MEDICAL_STUDENT_YEARS,
+  OTHER_INSTITUTION,
+  PARTICIPANT_CATEGORIES,
+  PREFIXES,
+} from "@/lib/formOptions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -31,6 +37,11 @@ export default function RegisterPage() {
   const [verificationEmail, setVerificationEmail] = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
   const [codeSentMessage, setCodeSentMessage] = useState("");
+  const [participantCategory, setParticipantCategory] = useState("");
+  const [medicalStudentInstitution, setMedicalStudentInstitution] =
+    useState("");
+
+  const isMedicalStudent = participantCategory === "Medical Student";
 
   useEffect(() => {
     if (user?.profileComplete) {
@@ -133,6 +144,15 @@ export default function RegisterPage() {
     setSubmitting(true);
 
     const form = new FormData(event.currentTarget);
+    const selectedParticipantCategory = String(
+      form.get("participantCategory"),
+    ) as (typeof PARTICIPANT_CATEGORIES)[number];
+    const selectedInstitution = String(form.get("institution") ?? "").trim();
+    const institution =
+      selectedParticipantCategory === "Medical Student" &&
+      selectedInstitution === OTHER_INSTITUTION
+        ? String(form.get("otherInstitution") ?? "").trim()
+        : selectedInstitution;
 
     try {
       await completeProfile({
@@ -143,12 +163,10 @@ export default function RegisterPage() {
         suffix: optionalValue(form, "suffix"),
         specialty: optionalValue(form, "specialty"),
         phone: String(form.get("phone") ?? "").trim(),
-        institution: String(form.get("institution") ?? "").trim(),
+        institution,
         position: optionalValue(form, "position"),
         department: optionalValue(form, "department"),
-        participantCategory: String(
-          form.get("participantCategory"),
-        ) as (typeof PARTICIPANT_CATEGORIES)[number],
+        participantCategory: selectedParticipantCategory,
         city: optionalValue(form, "city"),
       });
       router.replace("/");
@@ -374,25 +392,6 @@ export default function RegisterPage() {
                     autoComplete="tel"
                     required
                   />
-                  <FormField
-                    className={styles.field}
-                    label="Institution"
-                    name="institution"
-                    type="text"
-                    required
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="Position"
-                    name="position"
-                    type="text"
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="Department"
-                    name="department"
-                    type="text"
-                  />
                   <SelectField
                     className={styles.field}
                     label="Participant Category"
@@ -400,10 +399,83 @@ export default function RegisterPage() {
                     defaultValue=""
                     required
                     placeholder="Select"
+                    onChange={(event) => {
+                      setParticipantCategory(event.target.value);
+                      setMedicalStudentInstitution("");
+                    }}
                     options={PARTICIPANT_CATEGORIES.map((value) => ({
                       value,
                       label: value,
                     }))}
+                  />
+                  {isMedicalStudent ? (
+                    <div
+                      className={`${styles.field} ${styles.institutionField} ${styles.medicalInstitutionField}`}
+                    >
+                      <SelectField
+                        label="Institution"
+                        name="institution"
+                        defaultValue=""
+                        required
+                        placeholder="Select"
+                        options={[
+                          ...MEDICAL_STUDENT_INSTITUTIONS.map((value) => ({
+                            value,
+                            label: value,
+                          })),
+                          {
+                            value: OTHER_INSTITUTION,
+                            label: OTHER_INSTITUTION,
+                          },
+                        ]}
+                        onChange={(event) =>
+                          setMedicalStudentInstitution(event.target.value)
+                        }
+                      />
+                      {medicalStudentInstitution === OTHER_INSTITUTION ? (
+                        <FormField
+                          label="Other Institution"
+                          name="otherInstitution"
+                          type="text"
+                          required
+                        />
+                      ) : null}
+                    </div>
+                  ) : (
+                    <FormField
+                      className={`${styles.field} ${styles.institutionField}`}
+                      label="Institution"
+                      name="institution"
+                      type="text"
+                      required
+                    />
+                  )}
+                  {isMedicalStudent ? (
+                    <SelectField
+                      className={styles.field}
+                      label="Year"
+                      name="position"
+                      defaultValue=""
+                      required
+                      placeholder="Select"
+                      options={MEDICAL_STUDENT_YEARS.map((value) => ({
+                        value,
+                        label: value,
+                      }))}
+                    />
+                  ) : (
+                    <FormField
+                      className={styles.field}
+                      label="Position"
+                      name="position"
+                      type="text"
+                    />
+                  )}
+                  <FormField
+                    className={styles.field}
+                    label={isMedicalStudent ? "Program" : "Department"}
+                    name="department"
+                    type="text"
                   />
                   <FormField
                     className={styles.field}

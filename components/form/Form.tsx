@@ -204,6 +204,12 @@ export function FileUploadField({
   ...rest
 }: FileUploadFieldProps) {
   const inputId = id ?? (typeof label === "string" ? label : undefined);
+  const formatFileSize = (bytes: number) => {
+    if (bytes >= 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    return `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
+  };
   return (
     <div
       className={[
@@ -214,17 +220,45 @@ export function FileUploadField({
       ].join(" ")}
     >
       {label ? <label htmlFor={inputId}>{label}</label> : null}
-      <label className={styles.dropFileField} htmlFor={inputId}>
-        <i className="bx bx-upload" aria-hidden="true" />
+      <label
+        className={`${styles.dropFileField} ${
+          selectedFiles.length > 0 ? styles.hasSelectedFiles : ""
+        }`}
+        htmlFor={inputId}
+      >
         <input id={inputId} type="file" {...rest} />
-        <p className={styles.dropFileFieldContext}>
-          {contextText ?? "Click to select files or drag and drop"}
-        </p>
+        <div className={styles.uploadPrompt}>
+          <span className={styles.uploadIcon}>
+            <i className="bx bx-upload" aria-hidden="true" />
+          </span>
+          <div>
+            <strong>
+              {selectedFiles.length > 0
+                ? rest.multiple
+                  ? "Add more files"
+                  : "Choose a different file"
+                : "Choose file"}
+            </strong>
+            <p className={styles.dropFileFieldContext}>
+              {contextText ?? "Click to select files or drag and drop"}
+            </p>
+          </div>
+        </div>
         {selectedFiles.length > 0 ? (
           <ul className={styles.fileList}>
             {selectedFiles.map((file) => (
               <li key={`${file.name}-${file.lastModified}`}>
-                {file.name} ({Math.ceil(file.size / 1024)} KB)
+                <span className={styles.selectedFileIcon}>
+                  <i className="bx bx-file-blank" aria-hidden="true" />
+                </span>
+                <span className={styles.selectedFileDetails}>
+                  <strong title={file.name}>{file.name}</strong>
+                  <small>{formatFileSize(file.size)}</small>
+                </span>
+                <i
+                  className={`bx bx-check-circle ${styles.selectedFileCheck}`}
+                  aria-label="Selected"
+                />
               </li>
             ))}
           </ul>
