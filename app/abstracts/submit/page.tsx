@@ -14,11 +14,10 @@ import {
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
-import RegistrationPaymentGate from "@/components/registration-payment-gate";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { parseKeywordsInput } from "@/lib/abstractForm";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useEffect, useState } from "react";
 import styles from "../abstracts.module.scss";
@@ -37,14 +36,9 @@ export default function SubmitAbstractPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createDraft = useMutation(api.abstracts.createDraft);
-  const submitDraft = useMutation(api.abstracts.submitDraft);
   const generateUploadUrl = useMutation(api.abstracts.generateUploadUrl);
   const attachUploadedFile = useMutation(api.abstracts.attachUploadedFile);
   const removeFile = useMutation(api.abstracts.removeFile);
-  const registrationStatus = useQuery(
-    api.billingQueries.getRegistrationStatus,
-    isAuthenticated ? {} : "skip",
-  );
 
   const [title, setTitle] = useState("");
   const [authors, setAuthors] = useState("");
@@ -210,8 +204,7 @@ export default function SubmitAbstractPage() {
       await uploadPendingFiles(created._id);
 
       if (mode === "submit") {
-        await submitDraft({ abstractId: created._id });
-        router.replace(`/abstracts/${created._id}`);
+        router.replace(`/abstracts/${created._id}/payment`);
       } else {
         router.replace(`/abstracts/${created._id}/edit`);
       }
@@ -382,8 +375,6 @@ export default function SubmitAbstractPage() {
                 />
               </section>
 
-              <RegistrationPaymentGate status={registrationStatus} />
-
               <section className={styles.card}>
                 <h2>Paper File</h2>
                 <p className={styles.stepIntro}>
@@ -464,12 +455,10 @@ export default function SubmitAbstractPage() {
                   <Button
                     className="primary"
                     type="button"
-                    disabled={
-                      submitting || registrationStatus?.eligible !== true
-                    }
+                    disabled={submitting}
                     onClick={() => void handleSave("submit")}
                   >
-                    {submitting ? "Please wait..." : "Submit for Review"}
+                    {submitting ? "Saving and uploading..." : "Continue to Payment"}
                   </Button>
                 </div>
               </section>

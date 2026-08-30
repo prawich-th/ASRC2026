@@ -15,8 +15,10 @@ export type RegistrationStatus = {
 
 export default function RegistrationPaymentGate({
   status,
+  returnPath,
 }: {
   status: RegistrationStatus | undefined;
+  returnPath: string;
 }) {
   const createCheckout = useAction(api.billing.createRegistrationCheckout);
   const [startingCheckout, setStartingCheckout] = useState(false);
@@ -26,7 +28,7 @@ export default function RegistrationPaymentGate({
     setStartingCheckout(true);
     setError("");
     try {
-      const checkout = await createCheckout();
+      const checkout = await createCheckout({ returnPath });
       if (!checkout.url) {
         throw new Error("Stripe did not return a checkout link");
       }
@@ -61,7 +63,7 @@ export default function RegistrationPaymentGate({
               {status.waived
                 ? "Your registration fee has been waived."
                 : "Your registration fee has been paid."}{" "}
-              You can submit your abstract for review.
+              Your registration is complete.
             </p>
           </div>
         </div>
@@ -76,8 +78,9 @@ export default function RegistrationPaymentGate({
         <div>
           <h2>Registration Fee Required</h2>
           <p>
-            Complete the one-time registration payment before submitting your
-            abstract. Payment is securely handled by Stripe.
+            Complete the one-time registration payment. This fee belongs to
+            your account and is not charged per abstract. Payment is securely
+            handled by Stripe.
           </p>
         </div>
       </div>

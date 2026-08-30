@@ -14,7 +14,6 @@ import {
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
-import RegistrationPaymentGate from "@/components/registration-payment-gate";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { getAbstractStatusLabel } from "@/lib/abstractDisplay";
@@ -54,14 +53,9 @@ export default function EditAbstractPage() {
 
   const detail = useQuery(api.abstracts.getMineById, { abstractId });
   const updateDraft = useMutation(api.abstracts.updateDraft);
-  const submitDraft = useMutation(api.abstracts.submitDraft);
   const generateUploadUrl = useMutation(api.abstracts.generateUploadUrl);
   const attachUploadedFile = useMutation(api.abstracts.attachUploadedFile);
   const removeFile = useMutation(api.abstracts.removeFile);
-  const registrationStatus = useQuery(
-    api.billingQueries.getRegistrationStatus,
-    isAuthenticated ? {} : "skip",
-  );
 
   const [draft, setDraft] = useState<DraftForm | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -286,8 +280,7 @@ export default function EditAbstractPage() {
       await uploadPendingFiles();
 
       if (mode === "submit") {
-        await submitDraft({ abstractId });
-        router.replace(`/abstracts/${abstractId}`);
+        router.replace(`/abstracts/${abstractId}/payment`);
       } else {
         router.refresh();
       }
@@ -518,8 +511,6 @@ export default function EditAbstractPage() {
                     />
                   </section>
 
-                  <RegistrationPaymentGate status={registrationStatus} />
-
                   <section className={styles.card}>
                     <h2>Paper File</h2>
                     <p className={styles.stepIntro}>
@@ -590,10 +581,12 @@ export default function EditAbstractPage() {
                       <Button
                         className="primary"
                         type="button"
-                        disabled={submitting || registrationStatus?.eligible !== true}
+                        disabled={submitting}
                         onClick={() => void handleSave("submit")}
                       >
-                        {submitting ? "Please wait..." : isRevision ? "Resubmit for Review" : "Submit for Review"}
+                        {submitting
+                          ? "Saving and uploading..."
+                          : "Continue to Payment"}
                       </Button>
                     </div>
                   </section>

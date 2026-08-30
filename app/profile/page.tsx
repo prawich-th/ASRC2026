@@ -47,6 +47,10 @@ export default function ProfilePage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(api.users.me);
   const abstracts = useQuery(api.abstracts.listMine);
+  const registrationStatus = useQuery(
+    api.billingQueries.getRegistrationStatus,
+    isAuthenticated ? {} : "skip",
+  );
   const updateProfile = useMutation(api.users.updateProfile);
   const generateProfileImageUploadUrl = useMutation(
     api.users.generateProfileImageUploadUrl,
@@ -211,6 +215,7 @@ export default function ProfilePage() {
     user === undefined ||
     user === null ||
     abstracts === undefined ||
+    registrationStatus === undefined ||
     !formValues
   ) {
     return <LoadingScreen what={["your profile", "your abstracts"]} />;
@@ -365,6 +370,26 @@ export default function ProfilePage() {
             </form>
           </section>
 
+          {abstracts.length > 0 && !registrationStatus.eligible ? (
+            <section className={`${styles.card} ${styles.registrationFeeCard}`}>
+              <div className={styles.registrationFeeDetails}>
+                <i className="bx bx-credit-card" aria-hidden="true" />
+                <div>
+                  <h2>Registration Fee</h2>
+                  <p>
+                    This is a one-time account registration payment and is not
+                    tied to a specific abstract.
+                  </p>
+                </div>
+              </div>
+              <Link href="/registration-payment">
+                <Button className="primary" type="button">
+                  Pay Registration Fee
+                </Button>
+              </Link>
+            </section>
+          ) : null}
+
           <section className={styles.card}>
             <div className={styles.listHeader}>
               <h2>My Abstract(s)</h2>
@@ -397,6 +422,7 @@ export default function ProfilePage() {
                       <Link
                         href={`/abstracts/${abstract._id}`}
                         className={styles.chevron}
+                        aria-label={`View ${abstract.title}`}
                       >
                         <i className="bx bx-chevron-right" aria-hidden="true" />
                       </Link>

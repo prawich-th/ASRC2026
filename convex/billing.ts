@@ -17,16 +17,37 @@ type CheckoutUser = {
   registrationFeeWaived: boolean;
 };
 
+function validateCheckoutReturnPath(returnPath: string): string {
+  if (
+    returnPath === "/registration-payment" ||
+    /^\/abstracts\/[A-Za-z0-9_-]+\/payment$/.test(returnPath)
+  ) {
+    return returnPath;
+  }
+  throw new Error("Invalid checkout return path");
+}
+
+function buildCheckoutReturnUrl(
+  siteUrl: string,
+  returnPath: string,
+  result: "success" | "canceled",
+): string {
+  const url = new URL(returnPath, `${siteUrl.replace(/\/+$/, "")}/`);
+  url.searchParams.set("payment", result);
+  return url.toString();
+}
+
 export const createRegistrationCheckout = action({
-  args: {},
+  args: { returnPath: v.string() },
   returns: v.object({
     sessionId: v.string(),
     url: v.union(v.string(), v.null()),
   }),
-  handler: async (ctx): Promise<{
+  handler: async (ctx, args): Promise<{
     sessionId: string;
     url: string | null;
   }> => {
+    const returnPath = validateCheckoutReturnPath(args.returnPath);
     const user: CheckoutUser = await ctx.runQuery(
       internal.billingQueries.getCheckoutUser,
       {},
@@ -69,13 +90,12 @@ export const createRegistrationCheckout = action({
       email: user.email,
       name: user.name,
     });
-    const baseUrl = siteUrl.replace(/\/+$/, "");
     return await stripeClient.createCheckoutSession(ctx, {
       priceId,
       customerId: customer.customerId,
       mode: "payment",
-      successUrl: `${baseUrl}/abstracts/submit?payment=success`,
-      cancelUrl: `${baseUrl}/abstracts/submit?payment=canceled`,
+      successUrl: buildCheckoutReturnUrl(siteUrl, returnPath, "success"),
+      cancelUrl: buildCheckoutReturnUrl(siteUrl, returnPath, "canceled"),
       metadata: {
         purpose: REGISTRATION_FEE_PURPOSE,
         userId: user.userId,
