@@ -1,44 +1,24 @@
-.page {
-  min-height: 100vh;
+.inner {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.pageHeader {
   display: flex;
-  flex-direction: column;
-  background: var(--background);
-  color: #171717;
-}
-
-.banner {
-  background: var(--orange);
-  color: white;
-}
-
-.bannerInner {
-  padding: 1.35rem 5rem;
-
-  @media (max-width: 900px) {
-    padding: 1.25rem 2rem;
-  }
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
 
   h1 {
     margin: 0;
     font-size: 2rem;
-    font-weight: 700;
   }
-}
 
-.main {
-  flex: 1;
-  padding: 2rem 5rem 4rem;
-
-  @media (max-width: 900px) {
-    padding: 1.5rem 2rem 3rem;
+  p {
+    margin: 0.35rem 0 0;
+    color: #6a655d;
   }
-}
-
-.inner {
-  max-width: 80rem;
-  margin: 0 auto;
-  display: grid;
-  gap: 1.25rem;
 }
 
 .card {
@@ -49,7 +29,7 @@
 
   h2 {
     margin: 0 0 1rem;
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 }
 
@@ -140,53 +120,6 @@
   font-size: 0.9rem;
 }
 
-.registrationFeeCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.25rem;
-
-  @media (max-width: 650px) {
-    align-items: stretch;
-    flex-direction: column;
-  }
-}
-
-.registrationFeeDetails {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.9rem;
-
-  > i {
-    color: var(--orange);
-    font-size: 1.8rem;
-    line-height: 1;
-  }
-
-  h2 {
-    margin-bottom: 0.35rem;
-  }
-
-  p {
-    margin: 0;
-    color: #514d46;
-    line-height: 1.5;
-  }
-}
-
-.listHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-
-  h2 {
-    margin: 0;
-  }
-}
-
 .abstractList {
   margin: 0;
   padding: 0;
@@ -239,7 +172,7 @@
 
   h3 {
     margin: 0;
-    font-size: 1.85rem;
+    font-size: 1.35rem;
     font-weight: 500;
     line-height: 1.15;
 

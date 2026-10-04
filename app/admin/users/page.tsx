@@ -1,9 +1,6 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
-import RegistrationFeeDialog, {
-  RegistrationFeeDialogUser,
-} from "@/components/admin/registration-fee-dialog";
 import Button from "@/components/form/button";
 import {
   FileUploadField,
@@ -21,11 +18,7 @@ import {
   UserImportError,
 } from "@/lib/userImport";
 import { useMutation, usePaginatedQuery } from "convex/react";
-import { ChangeEvent, useCallback, useEffect, useState } from "react";
-
-type SelectedFeeUser = RegistrationFeeDialogUser & {
-  userId: Id<"users">;
-};
+import { ChangeEvent, useEffect, useState } from "react";
 
 function getInitials(user: {
   firstName?: string;
@@ -58,15 +51,9 @@ export default function AdminUsersPage() {
     { initialNumItems: 25 },
   );
   const setUserRole = useMutation(api.adminUsers.setRole);
-  const setRegistrationFeeWaiver = useMutation(
-    api.adminUsers.setRegistrationFeeWaiver,
-  );
   const importPreRegistered = useMutation(api.adminUsers.importPreRegistered);
   const [savingId, setSavingId] = useState<Id<"users"> | null>(null);
   const [error, setError] = useState("");
-  const [selectedFeeUser, setSelectedFeeUser] =
-    useState<SelectedFeeUser | null>(null);
-  const [feeDialogError, setFeeDialogError] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importUsers, setImportUsers] = useState<ImportedUser[]>([]);
@@ -97,35 +84,6 @@ export default function AdminUsersPage() {
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Could not update role.",
-      );
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  const closeFeeDialog = useCallback(() => {
-    setSelectedFeeUser(null);
-    setFeeDialogError("");
-  }, []);
-
-  async function confirmFeeWaiverChange() {
-    if (!selectedFeeUser || selectedFeeUser.status === "paid") {
-      return;
-    }
-    const waived = selectedFeeUser.status === "required";
-    setFeeDialogError("");
-    setSavingId(selectedFeeUser.userId);
-    try {
-      await setRegistrationFeeWaiver({
-        userId: selectedFeeUser.userId,
-        waived,
-      });
-      closeFeeDialog();
-    } catch (caught) {
-      setFeeDialogError(
-        caught instanceof Error
-          ? caught.message
-          : "Could not update registration fee waiver.",
       );
     } finally {
       setSavingId(null);
@@ -343,7 +301,6 @@ export default function AdminUsersPage() {
                 <th>Participant</th>
                 <th>Organization</th>
                 <th>Status</th>
-                <th>Registration Fee</th>
                 <th>Access</th>
               </tr>
             </thead>
@@ -414,44 +371,6 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td>
-                    <button
-                      className={`${styles.feeStatusButton} ${
-                        styles[user.registrationFeeStatus]
-                      }`}
-                      type="button"
-                      disabled={savingId === user._id}
-                      aria-label={`Registration fee status for ${
-                        user.name || user.email || "user"
-                      }: ${user.registrationFeeStatus}`}
-                      onClick={() => {
-                        setFeeDialogError("");
-                        setSelectedFeeUser({
-                          userId: user._id,
-                          label: user.name || user.email || "this user",
-                          status: user.registrationFeeStatus,
-                        });
-                      }}
-                    >
-                      <i
-                        className={`bx ${
-                          user.registrationFeeStatus === "paid"
-                            ? "bx-check-circle"
-                            : user.registrationFeeStatus === "waived"
-                              ? "bx-shield-quarter"
-                              : "bx-clock"
-                        }`}
-                        aria-hidden="true"
-                      />
-                      <span>
-                        {user.registrationFeeStatus === "paid"
-                          ? "Paid"
-                          : user.registrationFeeStatus === "waived"
-                            ? "Waived"
-                            : "Required"}
-                      </span>
-                    </button>
-                  </td>
-                  <td>
                     <select
                       className={styles.select}
                       aria-label={`Role for ${user.name || user.email || "user"}`}
@@ -473,7 +392,7 @@ export default function AdminUsersPage() {
               ))}
               {results.length === 0 ? (
                 <tr>
-                  <td className={styles.empty} colSpan={5}>
+                  <td className={styles.empty} colSpan={4}>
                     {debouncedSearch
                       ? "No users match your search."
                       : "No users found."}
@@ -496,13 +415,6 @@ export default function AdminUsersPage() {
           </Button>
         </div>
       ) : null}
-      <RegistrationFeeDialog
-        user={selectedFeeUser}
-        error={feeDialogError}
-        saving={selectedFeeUser !== null && savingId === selectedFeeUser.userId}
-        onConfirm={() => void confirmFeeWaiverChange()}
-        onClose={closeFeeDialog}
-      />
     </section>
   );
 }

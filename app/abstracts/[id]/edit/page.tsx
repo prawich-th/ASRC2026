@@ -53,6 +53,7 @@ export default function EditAbstractPage() {
 
   const detail = useQuery(api.abstracts.getMineById, { abstractId });
   const updateDraft = useMutation(api.abstracts.updateDraft);
+  const submitDraft = useMutation(api.abstracts.submitDraft);
   const generateUploadUrl = useMutation(api.abstracts.generateUploadUrl);
   const attachUploadedFile = useMutation(api.abstracts.attachUploadedFile);
   const removeFile = useMutation(api.abstracts.removeFile);
@@ -280,7 +281,8 @@ export default function EditAbstractPage() {
       await uploadPendingFiles();
 
       if (mode === "submit") {
-        router.replace(`/abstracts/${abstractId}/payment`);
+        await submitDraft({ abstractId });
+        router.replace(`/abstracts/${abstractId}`);
       } else {
         router.refresh();
       }
@@ -318,9 +320,9 @@ export default function EditAbstractPage() {
                 edit it.
               </p>
               <div className={styles.actions}>
-                <Link href="/profile">
+                <Link href="/profile/abstracts">
                   <Button className="primary" type="button">
-                    Back to Profile
+                    Back to My Abstracts
                   </Button>
                 </Link>
               </div>
@@ -585,8 +587,10 @@ export default function EditAbstractPage() {
                         onClick={() => void handleSave("submit")}
                       >
                         {submitting
-                          ? "Saving and uploading..."
-                          : "Continue to Payment"}
+                          ? "Submitting..."
+                          : isRevision
+                            ? "Resubmit for Review"
+                            : "Submit for Review"}
                       </Button>
                     </div>
                   </section>

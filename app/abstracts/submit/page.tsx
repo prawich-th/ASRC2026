@@ -36,6 +36,7 @@ export default function SubmitAbstractPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createDraft = useMutation(api.abstracts.createDraft);
+  const submitDraft = useMutation(api.abstracts.submitDraft);
   const generateUploadUrl = useMutation(api.abstracts.generateUploadUrl);
   const attachUploadedFile = useMutation(api.abstracts.attachUploadedFile);
   const removeFile = useMutation(api.abstracts.removeFile);
@@ -204,7 +205,8 @@ export default function SubmitAbstractPage() {
       await uploadPendingFiles(created._id);
 
       if (mode === "submit") {
-        router.replace(`/abstracts/${created._id}/payment`);
+        await submitDraft({ abstractId: created._id });
+        router.replace(`/abstracts/${created._id}`);
       } else {
         router.replace(`/abstracts/${created._id}/edit`);
       }
@@ -458,7 +460,7 @@ export default function SubmitAbstractPage() {
                     disabled={submitting}
                     onClick={() => void handleSave("submit")}
                   >
-                    {submitting ? "Saving and uploading..." : "Continue to Payment"}
+                    {submitting ? "Submitting..." : "Submit for Review"}
                   </Button>
                 </div>
               </section>

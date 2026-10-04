@@ -16,7 +16,6 @@ async function seedUsers() {
       name: "Participant",
       email: "delivered+participant@resend.dev",
       wantsNotifications: true,
-      registrationFeeWaived: true,
     });
     const staff = await ctx.db.insert("users", {
       name: "Staff",
@@ -407,7 +406,7 @@ describe("tiered administration", () => {
     const staff = t.withIdentity({ subject: ids.staff });
 
     await staff.mutation(api.keyDates.create, {
-      displayDate: "14 March 2027",
+      displayDate: "10 March 2027",
       title: "Conference",
       tone: "red",
       sortOrder: 20,

@@ -6,7 +6,7 @@ import styles from "@/app/home.module.scss";
 const TARGET = {
   year: 2027,
   month: 2, // March (0-indexed)
-  date: 14,
+  date: 10,
 } as const;
 
 type CalendarDate = {
@@ -101,7 +101,7 @@ export default function Countdown() {
     return () => window.clearInterval(id);
   }, []);
 
-  const label = `${remaining.months} months and ${remaining.days} days until 14 March 2027`;
+  const label = `${remaining.months} months and ${remaining.days} days until 10 March 2027`;
 
   return (
     <div

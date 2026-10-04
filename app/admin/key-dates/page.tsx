@@ -104,7 +104,7 @@ export default function AdminKeyDatesPage() {
           </div>
         </div>
         <form className={styles.formGrid} onSubmit={add}>
-          <label>Date text<input required name="displayDate" className={styles.field} placeholder="14 March 2027" /></label>
+          <label>Date text<input required name="displayDate" className={styles.field} placeholder="10 March 2027" /></label>
           <label>Event title<input required name="title" className={styles.field} /></label>
           <label>Tone<select name="tone" className={styles.select}><option value="green">Green</option><option value="orange">Orange</option><option value="red">Red</option></select></label>
           <label>Order<input name="sortOrder" type="number" min="0" defaultValue="0" className={styles.field} /></label>

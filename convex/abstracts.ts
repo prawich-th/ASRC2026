@@ -25,7 +25,6 @@ import {
   adminAbstractValidator,
 } from "./lib/abstract";
 import { getCurrentUser, requireRole } from "./lib/auth";
-import { canSubmitAbstract } from "./lib/registrationPayment";
 import {
   abstractDecisionEmail,
   abstractSubmissionEmail,
@@ -314,12 +313,6 @@ export const submitDraft = mutation({
       )
     ) {
       throw new Error("Please upload the completed paper as a PDF before submission");
-    }
-    const registration = await canSubmitAbstract(ctx, user);
-    if (!registration.eligible) {
-      throw new Error(
-        "Pay the registration fee before submitting your abstract, or contact an administrator if your fee should be waived",
-      );
     }
 
     const now = Date.now();
