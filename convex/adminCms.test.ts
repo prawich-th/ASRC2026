@@ -427,6 +427,39 @@ describe("tiered administration", () => {
     ]);
   });
 
+  test("new key dates are appended and can be reordered", async () => {
+    const { t, ids } = await seedUsers();
+    const staff = t.withIdentity({ subject: ids.staff });
+    const first = await staff.mutation(api.keyDates.create, {
+      displayDate: "1 October 2026",
+      title: "Submissions open",
+      tone: "green",
+      published: true,
+    });
+    const second = await staff.mutation(api.keyDates.create, {
+      displayDate: "10 March 2027",
+      title: "Conference",
+      tone: "red",
+      published: false,
+    });
+    expect(second.sortOrder).toBeGreaterThan(first.sortOrder);
+
+    await staff.mutation(api.keyDates.reorder, {
+      keyDateIds: [second._id, first._id],
+    });
+    const dates = await staff.query(api.keyDates.listAdmin, {});
+    expect(dates.map((date) => date.title)).toEqual([
+      "Conference",
+      "Submissions open",
+    ]);
+
+    await expect(
+      staff.mutation(api.keyDates.reorder, {
+        keyDateIds: [first._id, first._id],
+      }),
+    ).rejects.toThrow("Each key date can only appear once");
+  });
+
   test("key date campaigns ignore cosmetic edits and announce visible changes", async () => {
     const { t, ids } = await seedUsers();
     const staff = t.withIdentity({ subject: ids.staff });
@@ -443,7 +476,6 @@ describe("tiered administration", () => {
       displayDate: keyDate.displayDate,
       title: keyDate.title,
       tone: "orange",
-      sortOrder: 20,
     });
     let campaigns = await t.run(async (ctx) => {
       return await ctx.db.query("notificationCampaigns").take(10);
@@ -455,7 +487,6 @@ describe("tiered administration", () => {
       displayDate: "8 October 2026",
       title: keyDate.title,
       tone: "orange",
-      sortOrder: 20,
     });
     campaigns = await t.run(async (ctx) => {
       return await ctx.db.query("notificationCampaigns").take(10);

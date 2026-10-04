@@ -351,11 +351,70 @@
   padding: 2rem;
 }
 
-.pagination {
+.pager {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
-  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+
+.pagerSummary {
+  margin: 0;
+  color: #6a655d;
+  font-size: 0.9rem;
+}
+
+.pagerControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagerSize {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 0.5rem;
+  color: #6a655d;
+  font-size: 0.9rem;
+
+  .select {
+    width: auto;
+    margin-top: 0;
+    padding: 0.4rem 0.5rem;
+  }
+}
+
+.pagerButton {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid #d8d1c7;
+  border-radius: 0.5rem;
+  background: white;
+  color: #2e2b26;
+  font-size: 1.25rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+}
+
+.pagerPage {
+  min-width: 5.5rem;
+  text-align: center;
+  font-weight: 650;
+  font-size: 0.9rem;
 }
 
 .preview {
@@ -671,4 +730,124 @@
   min-width: 54rem;
   background: white;
   font-size: 0.9rem;
+}
+
+.helperText {
+  margin: 0;
+  color: #6a655d;
+  font-size: 0.9rem;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.sortableList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.sortableRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #ece7df;
+  border-radius: 0.75rem;
+  background: white;
+
+  &.dragging {
+    z-index: 1;
+    border-color: var(--green);
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.14);
+  }
+
+  > .error {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: auto auto minmax(0, 1fr);
+
+    > .actions {
+      grid-column: 1 / -1;
+      justify-content: flex-end;
+    }
+  }
+}
+
+.dragHandle {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #f5f1ea;
+  color: #6a655d;
+  font-size: 1.35rem;
+  cursor: grab;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--orange) 40%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+.sortablePosition {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: var(--green);
+
+  &.orange {
+    background: var(--orange);
+  }
+
+  &.red {
+    background: var(--tu-red);
+  }
+}
+
+.sortableFields {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.8fr) minmax(10rem, 1.4fr) minmax(6rem, 0.6fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+
+  label {
+    font-size: 0.85rem;
+    color: #5f5a52;
+  }
+
+  .checkboxLabel {
+    padding-bottom: 0.7rem;
+    color: inherit;
+  }
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
 }

@@ -1,20 +1,41 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
+import Pager, { PageSize, usePages } from "@/components/admin/pager";
 import Button from "@/components/form/button";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AdminAnnouncementsPage() {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [status, setStatus] = useState<"all" | "draft" | "published">("all");
+  const [pageSize, setPageSize] = useState<PageSize>(25);
   const query = usePaginatedQuery(
     api.announcements.listAdmin,
-    {},
-    { initialNumItems: 25 },
+    {
+      status: status === "all" ? undefined : status,
+      search: debouncedSearch || undefined,
+    },
+    { initialNumItems: pageSize },
   );
+  const pages = usePages(
+    query,
+    pageSize,
+    JSON.stringify([debouncedSearch, status, pageSize]),
+  );
+  const hasFilters = search.trim().length > 0 || status !== "all";
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
   const publish = useMutation(api.announcements.publish);
   const unpublish = useMutation(api.announcements.unpublish);
   const remove = useMutation(api.announcements.remove);
@@ -56,11 +77,41 @@ export default function AdminAnnouncementsPage() {
           <Button className="green" type="button">New announcement</Button>
         </Link>
       </div>
+      <div className={styles.filters}>
+        <label>
+          Search
+          <input
+            className={styles.field}
+            type="search"
+            value={search}
+            placeholder="Search announcement titles"
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        <label>
+          Status
+          <select
+            className={styles.select}
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as "all" | "draft" | "published")
+            }
+          >
+            <option value="all">All statuses</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </label>
+      </div>
       {error ? <p className={styles.error}>{error}</p> : null}
-      {query.status === "LoadingFirstPage" ? (
+      {pages.loadingPage ? (
         <LoadingScreen variant="inline" what="announcements" />
-      ) : query.results.length === 0 ? (
-        <p className={styles.empty}>No announcements yet.</p>
+      ) : pages.items.length === 0 ? (
+        <p className={styles.empty}>
+          {hasFilters
+            ? "No announcements match the selected filters."
+            : "No announcements yet."}
+        </p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -73,7 +124,7 @@ export default function AdminAnnouncementsPage() {
               </tr>
             </thead>
             <tbody>
-              {query.results.map((announcement) => (
+              {pages.items.map((announcement) => (
                 <tr key={announcement._id}>
                   <td>
                     <strong>{announcement.title}</strong>
@@ -115,13 +166,16 @@ export default function AdminAnnouncementsPage() {
           </table>
         </div>
       )}
-      {query.status === "CanLoadMore" || query.status === "LoadingMore" ? (
-        <div className={styles.pagination}>
-          <Button className="green" disabled={query.status === "LoadingMore"} type="button" onClick={() => query.loadMore(25)}>
-            {query.status === "LoadingMore" ? "Loading…" : "Load more"}
-          </Button>
-        </div>
-      ) : null}
+      <Pager
+        page={pages.page}
+        start={pages.start}
+        count={pages.items.length}
+        totalPages={pages.totalPages}
+        hasNext={pages.hasNext}
+        pageSize={pageSize}
+        onPageChange={pages.goToPage}
+        onPageSizeChange={setPageSize}
+      />
     </section>
   );
 }

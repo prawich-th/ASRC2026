@@ -1,19 +1,17 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
+import Pager, { PageSize, usePages } from "@/components/admin/pager";
 import Button from "@/components/form/button";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { getCategoryLabel } from "@/lib/abstractDisplay";
 import { usePaginatedQuery } from "convex/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type ReviewStatus =
-  | "submitted"
-  | "revision_requested"
-  | "selected"
-  | "rejected";
+  "submitted" | "revision_requested" | "selected" | "rejected";
 
 type AbstractCategory = "oral" | "poster";
 
@@ -33,36 +31,33 @@ function formatStatus(status: string) {
 
 export default function AllAbstractsPage() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<"all" | ReviewStatus>("all");
   const [category, setCategory] = useState<"all" | AbstractCategory>("all");
+  const [pageSize, setPageSize] = useState<PageSize>(25);
   const query = usePaginatedQuery(
     api.abstracts.listForReview,
-    status === "all" ? {} : { status },
-    { initialNumItems: 50 },
+    {
+      status: status === "all" ? undefined : status,
+      category: category === "all" ? undefined : category,
+      search: debouncedSearch || undefined,
+    },
+    { initialNumItems: pageSize },
   );
-  const normalizedSearch = search.trim().toLocaleLowerCase();
-  const filteredAbstracts = query.results.filter((item) => {
-    const owner = [
-      item.owner.name,
-      item.owner.firstName,
-      item.owner.lastName,
-      item.owner.email,
-    ]
-      .filter((value): value is string => Boolean(value))
-      .join(" ")
-      .toLocaleLowerCase();
-    const matchesSearch =
-      normalizedSearch.length === 0 ||
-      item.abstract.title.toLocaleLowerCase().includes(normalizedSearch) ||
-      item.abstract.code.includes(normalizedSearch) ||
-      owner.includes(normalizedSearch);
-    const matchesCategory =
-      category === "all" || item.abstract.category === category;
-
-    return matchesSearch && matchesCategory;
-  });
+  const pages = usePages(
+    query,
+    pageSize,
+    JSON.stringify([debouncedSearch, status, category, pageSize]),
+  );
   const hasFilters =
-    normalizedSearch.length > 0 || status !== "all" || category !== "all";
+    search.trim().length > 0 || status !== "all" || category !== "all";
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
   return (
     <section className={`${styles.card} ${styles.stack}`}>
@@ -80,7 +75,7 @@ export default function AllAbstractsPage() {
             className={styles.field}
             type="search"
             value={search}
-            placeholder="Search title, author, or ID"
+            placeholder="Search title or 6-digit ID"
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
@@ -116,20 +111,16 @@ export default function AllAbstractsPage() {
         </label>
       </div>
 
-      {query.status === "LoadingFirstPage" ? (
+      {pages.loadingPage ? (
         <LoadingScreen variant="inline" what="abstracts" />
-      ) : query.results.length === 0 ? (
-        <p className={styles.empty}>No abstracts have been submitted yet.</p>
-      ) : filteredAbstracts.length === 0 ? (
+      ) : pages.items.length === 0 ? (
         <p className={styles.empty}>
-          No loaded abstracts match the selected filters.
+          {hasFilters
+            ? "No abstracts match the selected filters."
+            : "No abstracts have been submitted yet."}
         </p>
       ) : (
         <>
-          <p>
-            Showing {filteredAbstracts.length} of {query.results.length} loaded
-            abstracts.
-          </p>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -144,7 +135,7 @@ export default function AllAbstractsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAbstracts.map((item) => (
+                {pages.items.map((item) => (
                   <tr key={item.abstract._id}>
                     <td>
                       <Link href={`/admin/abstracts/${item.abstract._id}`}>
@@ -214,18 +205,16 @@ export default function AllAbstractsPage() {
         </div>
       ) : null}
 
-      {query.status === "CanLoadMore" || query.status === "LoadingMore" ? (
-        <div className={styles.pagination}>
-          <Button
-            className="green"
-            disabled={query.status === "LoadingMore"}
-            type="button"
-            onClick={() => query.loadMore(50)}
-          >
-            {query.status === "LoadingMore" ? "Loading…" : "Load more"}
-          </Button>
-        </div>
-      ) : null}
+      <Pager
+        page={pages.page}
+        start={pages.start}
+        count={pages.items.length}
+        totalPages={pages.totalPages}
+        hasNext={pages.hasNext}
+        pageSize={pageSize}
+        onPageChange={pages.goToPage}
+        onPageSizeChange={setPageSize}
+      />
     </section>
   );
 }

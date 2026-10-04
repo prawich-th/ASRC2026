@@ -1,4 +1,5 @@
 import {
+  PaginationResult,
   paginationOptsValidator,
   paginationResultValidator,
 } from "convex/server";
@@ -440,38 +441,83 @@ export const removeFile = mutation({
   },
 });
 
+const reviewStatusValidator = v.union(
+  v.literal("submitted"),
+  v.literal("revision_requested"),
+  v.literal("selected"),
+  v.literal("rejected"),
+);
+
 export const listForReview = query({
   args: {
     paginationOpts: paginationOptsValidator,
-    status: v.optional(
-      v.union(
-        v.literal("submitted"),
-        v.literal("revision_requested"),
-        v.literal("selected"),
-        v.literal("rejected"),
-      ),
-    ),
+    status: v.optional(reviewStatusValidator),
+    category: v.optional(abstractCategoryValidator),
+    search: v.optional(v.string()),
   },
   returns: paginationResultValidator(adminAbstractSummaryValidator),
   handler: async (ctx, args) => {
     await requireRole(ctx, ["academic_staff"]);
-    const status = args.status;
-    const result =
-      status === undefined
-        ? await ctx.db
-            .query("abstracts")
-            .withIndex("by_status_and_submittedAt", (q) =>
-              q.gt("status", "draft"),
-            )
-            .order("desc")
-            .paginate(args.paginationOpts)
-        : await ctx.db
-            .query("abstracts")
-            .withIndex("by_status_and_submittedAt", (q) =>
-              q.eq("status", status),
-            )
-            .order("desc")
-            .paginate(args.paginationOpts);
+    const { status, category } = args;
+    const search = args.search?.trim();
+
+    let result: PaginationResult<Doc<"abstracts">>;
+    if (search && isAbstractCode(search)) {
+      result = await ctx.db
+        .query("abstracts")
+        .withIndex("by_code", (q) => q.eq("code", search))
+        .filter((q) =>
+          q.and(
+            q.neq(q.field("status"), "draft"),
+            status === undefined ? true : q.eq(q.field("status"), status),
+            category === undefined ? true : q.eq(q.field("category"), category),
+          ),
+        )
+        .paginate(args.paginationOpts);
+    } else if (search) {
+      result = await ctx.db
+        .query("abstracts")
+        .withSearchIndex("search_title", (q) => {
+          const byTitle = q.search("title", search);
+          if (status !== undefined && category !== undefined) {
+            return byTitle.eq("status", status).eq("category", category);
+          }
+          if (status !== undefined) {
+            return byTitle.eq("status", status);
+          }
+          if (category !== undefined) {
+            return byTitle.eq("category", category);
+          }
+          return byTitle;
+        })
+        .filter((q) => q.neq(q.field("status"), "draft"))
+        .paginate(args.paginationOpts);
+    } else if (category !== undefined) {
+      result = await ctx.db
+        .query("abstracts")
+        .withIndex("by_category_and_submittedAt", (q) =>
+          q.eq("category", category),
+        )
+        .order("desc")
+        .filter((q) =>
+          status === undefined
+            ? q.neq(q.field("status"), "draft")
+            : q.eq(q.field("status"), status),
+        )
+        .paginate(args.paginationOpts);
+    } else if (status !== undefined) {
+      result = await ctx.db
+        .query("abstracts")
+        .withIndex("by_status_and_submittedAt", (q) => q.eq("status", status))
+        .order("desc")
+        .paginate(args.paginationOpts);
+    } else {
+      result = await ctx.db
+        .query("abstracts")
+        .withIndex("by_status_and_submittedAt", (q) => q.gt("status", "draft"))
+        .order("desc")
+        .paginate(args.paginationOpts);
+    }
 
     const page = await Promise.all(
       result.page.map(async (abstract) => {

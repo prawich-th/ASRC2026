@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
+import Pager, { PageSize, usePages } from "@/components/admin/pager";
 import Button from "@/components/form/button";
 import {
   FileUploadField,
@@ -42,13 +43,19 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [role, setRoleFilter] = useState<StaffRole | "">("");
-  const { results, status, loadMore } = usePaginatedQuery(
+  const [pageSize, setPageSize] = useState<PageSize>(25);
+  const query = usePaginatedQuery(
     api.adminUsers.list,
     {
       search: debouncedSearch || undefined,
       role: role || undefined,
     },
-    { initialNumItems: 25 },
+    { initialNumItems: pageSize },
+  );
+  const pages = usePages(
+    query,
+    pageSize,
+    JSON.stringify([debouncedSearch, role, pageSize]),
   );
   const setUserRole = useMutation(api.adminUsers.setRole);
   const importPreRegistered = useMutation(api.adminUsers.importPreRegistered);
@@ -291,7 +298,7 @@ export default function AdminUsersPage() {
         />
       </div>
       {error ? <p className={styles.error}>{error}</p> : null}
-      {status === "LoadingFirstPage" ? (
+      {pages.loadingPage ? (
         <LoadingScreen variant="inline" what="users" />
       ) : (
         <div className={styles.tableWrap}>
@@ -305,7 +312,7 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {results.map((user) => (
+              {pages.items.map((user) => (
                 <tr key={user._id}>
                   <td className={styles.participantCell}>
                     <div className={styles.userIdentity}>
@@ -390,7 +397,7 @@ export default function AdminUsersPage() {
                   </td>
                 </tr>
               ))}
-              {results.length === 0 ? (
+              {pages.items.length === 0 ? (
                 <tr>
                   <td className={styles.empty} colSpan={4}>
                     {debouncedSearch
@@ -403,18 +410,16 @@ export default function AdminUsersPage() {
           </table>
         </div>
       )}
-      {status === "CanLoadMore" || status === "LoadingMore" ? (
-        <div className={styles.pagination}>
-          <Button
-            className="green"
-            disabled={status === "LoadingMore"}
-            type="button"
-            onClick={() => loadMore(25)}
-          >
-            {status === "LoadingMore" ? "Loading…" : "Load more"}
-          </Button>
-        </div>
-      ) : null}
+      <Pager
+        page={pages.page}
+        start={pages.start}
+        count={pages.items.length}
+        totalPages={pages.totalPages}
+        hasNext={pages.hasNext}
+        pageSize={pageSize}
+        onPageChange={pages.goToPage}
+        onPageSizeChange={setPageSize}
+      />
     </section>
   );
 }

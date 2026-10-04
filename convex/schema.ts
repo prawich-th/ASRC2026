@@ -22,14 +22,23 @@ export default defineSchema({
     .index("by_ownerId", ["ownerId"])
     .index("by_ownerId_and_status", ["ownerId", "status"])
     .index("by_status_and_submittedAt", ["status", "submittedAt"])
-    .index("by_code", ["code"]),
+    .index("by_code", ["code"])
+    .index("by_category_and_submittedAt", ["category", "submittedAt"])
+    .searchIndex("search_title", {
+      searchField: "title",
+      filterFields: ["status", "category"],
+    }),
   abstractFiles: defineTable(abstractFileFields)
     .index("by_ownerId", ["ownerId"])
     .index("by_abstractId", ["abstractId"])
     .index("by_ownerId_and_abstractId", ["ownerId", "abstractId"]),
   announcements: defineTable(announcementFields)
     .index("by_slug", ["slug"])
-    .index("by_status_and_publishedAt", ["status", "publishedAt"]),
+    .index("by_status_and_publishedAt", ["status", "publishedAt"])
+    .searchIndex("search_title", {
+      searchField: "title",
+      filterFields: ["status"],
+    }),
   keyDates: defineTable(keyDateFields)
     .index("by_sortOrder", ["sortOrder"])
     .index("by_published_and_sortOrder", ["published", "sortOrder"]),

@@ -115,6 +115,24 @@ function buildNavGroups(role: StaffRole | undefined): NavGroup[] {
   return groups;
 }
 
+const COLLAPSED_STORAGE_KEY = "asrc.dashboard.sidebarCollapsed";
+
+function readCollapsedPreference(): boolean {
+  try {
+    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeCollapsedPreference(collapsed: boolean) {
+  try {
+    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
+  } catch {
+    // Storage can be unavailable (private mode); the toggle still works.
+  }
+}
+
 function getInitials(user: {
   firstName?: string;
   lastName?: string;
@@ -146,12 +164,24 @@ export default function DashboardShell({
   const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(api.users.me);
   const [menuOpen, setMenuOpen] = useState(false);
+  // The sidebar only renders after auth resolves on the client, so reading
+  // storage during the first render cannot cause a hydration mismatch.
+  const [collapsed, setCollapsed] = useState(
+    () => typeof window !== "undefined" && readCollapsedPreference(),
+  );
   const [menuPath, setMenuPath] = useState(pathname);
 
   // Close the mobile menu after navigating to another section.
   if (menuPath !== pathname) {
     setMenuPath(pathname);
     setMenuOpen(false);
+  }
+
+  function toggleCollapsed() {
+    setCollapsed((current) => {
+      writeCollapsedPreference(!current);
+      return !current;
+    });
   }
 
   useEffect(() => {
@@ -182,9 +212,26 @@ export default function DashboardShell({
   return (
     <div className={styles.page}>
       <Header />
-      <div className={styles.layout}>
+      <div className={`${styles.layout} ${collapsed ? styles.collapsed : ""}`}>
         <aside className={styles.sidebar}>
-          <div className={styles.identity}>
+          <button
+            className={styles.collapseToggle}
+            type="button"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
+            aria-controls="dashboard-nav"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={toggleCollapsed}
+          >
+            <i
+              className={`bx ${collapsed ? "bx-chevrons-right" : "bx-chevrons-left"}`}
+              aria-hidden="true"
+            />
+          </button>
+          <div
+            className={styles.identity}
+            title={collapsed ? displayName : undefined}
+          >
             {user.image ? (
               // Convex storage URLs can be signed and should load directly.
               // eslint-disable-next-line @next/next/no-img-element
@@ -237,6 +284,7 @@ export default function DashboardShell({
                           href={item.href}
                           className={styles.link}
                           aria-current={active ? "page" : undefined}
+                          title={collapsed ? item.label : undefined}
                         >
                           <i className={`bx ${item.icon}`} aria-hidden="true" />
                           <span>{item.label}</span>
@@ -250,7 +298,11 @@ export default function DashboardShell({
             <div className={styles.group}>
               <ul>
                 <li>
-                  <Link href="/" className={styles.link}>
+                  <Link
+                    href="/"
+                    className={styles.link}
+                    title={collapsed ? "Back to website" : undefined}
+                  >
                     <i className="bx bx-home" aria-hidden="true" />
                     <span>Back to website</span>
                   </Link>
