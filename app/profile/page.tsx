@@ -2,28 +2,13 @@
 
 import Button from "@/components/form/button";
 import { FormField, SelectField } from "@/components/form/Form";
-import Footer from "@/components/layout/footer";
-import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
-import {
-  getAbstractStatusLabel,
-  getAbstractStatusTone,
-  getCategoryLabel,
-} from "@/lib/abstractDisplay";
 import { PREFIXES } from "@/lib/formOptions";
 import { Id } from "@/convex/_generated/dataModel";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import Link from "next/link";
+import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
-import {
-  ChangeEvent,
-  FormEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import styles from "./profile.module.scss";
 
 const prefixOptions = PREFIXES.map((prefix) => ({
@@ -44,13 +29,7 @@ type ProfileDraft = {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(api.users.me);
-  const abstracts = useQuery(api.abstracts.listMine);
-  const registrationStatus = useQuery(
-    api.billingQueries.getRegistrationStatus,
-    isAuthenticated ? {} : "skip",
-  );
   const updateProfile = useMutation(api.users.updateProfile);
   const generateProfileImageUploadUrl = useMutation(
     api.users.generateProfileImageUploadUrl,
@@ -63,12 +42,6 @@ export default function ProfilePage() {
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
-    }
-  }, [isLoading, isAuthenticated, router]);
 
   const profileSnapshot = useMemo<ProfileDraft | null>(() => {
     if (!user) {
@@ -209,233 +182,158 @@ export default function ProfilePage() {
     }
   }
 
-  if (
-    isLoading ||
-    !isAuthenticated ||
-    user === undefined ||
-    user === null ||
-    abstracts === undefined ||
-    registrationStatus === undefined ||
-    !formValues
-  ) {
-    return <LoadingScreen what={["your profile", "your abstracts"]} />;
+  if (!user || !formValues) {
+    return <LoadingScreen variant="inline" what="your profile" />;
   }
 
   return (
-    <div className={styles.page}>
-      <Header />
-      <section className={styles.banner}>
-        <div className={styles.bannerInner}>
-          <h1>My Account.</h1>
+    <div className={styles.inner}>
+      <div className={styles.pageHeader}>
+        <div>
+          <h1>Profile</h1>
+          <p>
+            Keep your name and affiliation up to date for certificates and the
+            programme.
+          </p>
         </div>
-      </section>
-
-      <main className={styles.main}>
-        <div className={styles.inner}>
-          <section className={styles.card}>
-            <h2>Personal Information</h2>
-            <form className={styles.profileForm} onSubmit={handleSave}>
-              <div className={styles.avatarColumn}>
-                {user.image ? (
-                  <img
-                    src={user.image}
-                    alt={`${user.firstName ?? "User"} profile`}
-                    className={styles.avatar}
-                  />
-                ) : (
-                  <div className={styles.avatarPlaceholder}>
-                    <i className="bx bx-user" aria-hidden="true" />
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  className={styles.hiddenFileInput}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfileImageChange}
-                />
-                <div className={styles.avatarActions}>
-                  <Button
-                    className="action"
-                    type="button"
-                    disabled={imageUploading}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {imageUploading ? "Uploading..." : "Upload Photo"}
-                  </Button>
-                  {user.profileImageId ? (
-                    <Button
-                      className="destructive"
-                      type="button"
-                      disabled={imageUploading}
-                      onClick={() => void handleRemoveProfileImage()}
-                    >
-                      Remove
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-              <div className={styles.fieldsColumn}>
-                <div className={styles.grid}>
-                  <SelectField
-                    label="Prefix"
-                    options={prefixOptions}
-                    value={formValues.prefix}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        prefix: event.target.value as (typeof PREFIXES)[number],
-                      }))
-                    }
-                  />
-                  <FormField
-                    label="First Name"
-                    value={formValues.firstName}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        firstName: event.target.value,
-                      }))
-                    }
-                  />
-                  <FormField
-                    label="Last Name"
-                    value={formValues.lastName}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        lastName: event.target.value,
-                      }))
-                    }
-                  />
-                  <FormField
-                    label="Other Name"
-                    value={formValues.otherName}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        otherName: event.target.value,
-                      }))
-                    }
-                  />
-                  <FormField
-                    label="Suffix"
-                    value={formValues.suffix}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        suffix: event.target.value,
-                      }))
-                    }
-                  />
-                  <FormField
-                    label="Institution"
-                    className={styles.fullWidth}
-                    value={formValues.institution}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        institution: event.target.value,
-                      }))
-                    }
-                  />
-                  <FormField
-                    label="Department / Program"
-                    value={formValues.department}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        department: event.target.value,
-                      }))
-                    }
-                  />
-                  <FormField
-                    label="Position"
-                    value={formValues.position}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...(current ?? formValues),
-                        position: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                {error ? <p className={styles.error}>{error}</p> : null}
-                <div className={styles.actions}>
-                  <Button className="green" disabled={saving} type="submit">
-                    {saving ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </section>
-
-          {abstracts.length > 0 && !registrationStatus.eligible ? (
-            <section className={`${styles.card} ${styles.registrationFeeCard}`}>
-              <div className={styles.registrationFeeDetails}>
-                <i className="bx bx-credit-card" aria-hidden="true" />
-                <div>
-                  <h2>Registration Fee</h2>
-                  <p>
-                    This is a one-time account registration payment and is not
-                    tied to a specific abstract.
-                  </p>
-                </div>
-              </div>
-              <Link href="/registration-payment">
-                <Button className="primary" type="button">
-                  Pay Registration Fee
-                </Button>
-              </Link>
-            </section>
-          ) : null}
-
-          <section className={styles.card}>
-            <div className={styles.listHeader}>
-              <h2>My Abstract(s)</h2>
-              <Link href="/abstracts/submit">
-                <Button className="primary" type="button">
-                  Submit New
-                </Button>
-              </Link>
-            </div>
-
-            {abstracts.length === 0 ? (
-              <p className={styles.emptyState}>
-                You have not created any abstracts yet.
-              </p>
+      </div>
+      <section className={styles.card}>
+        <h2>Personal Information</h2>
+        <form className={styles.profileForm} onSubmit={handleSave}>
+          <div className={styles.avatarColumn}>
+            {user.image ? (
+              <img
+                src={user.image}
+                alt={`${user.firstName ?? "User"} profile`}
+                className={styles.avatar}
+              />
             ) : (
-              <ul className={styles.abstractList}>
-                {abstracts.map((abstract) => {
-                  const tone = getAbstractStatusTone(abstract.status);
-                  return (
-                    <li key={abstract._id} className={styles.abstractItem}>
-                      <div className={`${styles.status} ${styles[tone]}`}>
-                        {getAbstractStatusLabel(abstract.status)}
-                      </div>
-                      <div className={styles.content}>
-                        <span className={styles.category}>
-                          {getCategoryLabel(abstract.category)}
-                        </span>
-                        <h3>{abstract.title}</h3>
-                      </div>
-                      <Link
-                        href={`/abstracts/${abstract._id}`}
-                        className={styles.chevron}
-                        aria-label={`View ${abstract.title}`}
-                      >
-                        <i className="bx bx-chevron-right" aria-hidden="true" />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className={styles.avatarPlaceholder}>
+                <i className="bx bx-user" aria-hidden="true" />
+              </div>
             )}
-          </section>
-        </div>
-      </main>
-
-      <Footer />
+            <input
+              ref={fileInputRef}
+              className={styles.hiddenFileInput}
+              type="file"
+              accept="image/*"
+              onChange={handleProfileImageChange}
+            />
+            <div className={styles.avatarActions}>
+              <Button
+                className="action"
+                type="button"
+                disabled={imageUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {imageUploading ? "Uploading..." : "Upload Photo"}
+              </Button>
+              {user.profileImageId ? (
+                <Button
+                  className="destructive"
+                  type="button"
+                  disabled={imageUploading}
+                  onClick={() => void handleRemoveProfileImage()}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          <div className={styles.fieldsColumn}>
+            <div className={styles.grid}>
+              <SelectField
+                label="Prefix"
+                options={prefixOptions}
+                value={formValues.prefix}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    prefix: event.target.value as (typeof PREFIXES)[number],
+                  }))
+                }
+              />
+              <FormField
+                label="First Name"
+                value={formValues.firstName}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    firstName: event.target.value,
+                  }))
+                }
+              />
+              <FormField
+                label="Last Name"
+                value={formValues.lastName}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    lastName: event.target.value,
+                  }))
+                }
+              />
+              <FormField
+                label="Other Name"
+                value={formValues.otherName}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    otherName: event.target.value,
+                  }))
+                }
+              />
+              <FormField
+                label="Suffix"
+                value={formValues.suffix}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    suffix: event.target.value,
+                  }))
+                }
+              />
+              <FormField
+                label="Institution"
+                className={styles.fullWidth}
+                value={formValues.institution}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    institution: event.target.value,
+                  }))
+                }
+              />
+              <FormField
+                label="Department / Program"
+                value={formValues.department}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    department: event.target.value,
+                  }))
+                }
+              />
+              <FormField
+                label="Position"
+                value={formValues.position}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...(current ?? formValues),
+                    position: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            {error ? <p className={styles.error}>{error}</p> : null}
+            <div className={styles.actions}>
+              <Button className="green" disabled={saving} type="submit">
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }

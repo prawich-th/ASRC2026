@@ -16,32 +16,6 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Registration payments
-
-Abstract submission uses a one-time Stripe Checkout payment. Configure these
-environment variables on each Convex deployment before enabling payment:
-
-```text
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_REGISTRATION_PRICE_ID=price_...
-SITE_URL=https://your-site.example
-```
-
-Create a one-time registration product and price in Stripe, then use that price
-ID for `STRIPE_REGISTRATION_PRICE_ID`. Add the Convex webhook endpoint below in
-Stripe and subscribe it to `checkout.session.completed`,
-`payment_intent.succeeded`, and `payment_intent.payment_failed`:
-
-```text
-https://<your-convex-deployment>.convex.site/stripe/webhook
-```
-
-The webhook signing secret shown by Stripe is `STRIPE_WEBHOOK_SECRET`. Users can
-save drafts before paying, but Convex rejects abstract submission until a
-successful registration payment is recorded or a super admin waives the fee on
-the Users admin page.
-
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

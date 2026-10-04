@@ -60,9 +60,9 @@ export default function AbstractViewPage() {
                 permission to view it.
               </p>
               <div className={styles.actions}>
-                <Link href="/profile">
+                <Link href="/profile/abstracts">
                   <Button className="primary" type="button">
-                    Back to Profile
+                    Back to My Abstracts
                   </Button>
                 </Link>
               </div>

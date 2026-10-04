@@ -8,6 +8,7 @@ import { mutation, MutationCtx, query } from "./_generated/server";
 import { requireRole } from "./lib/auth";
 import {
   announcementTagValidator,
+  announcementStatusValidator,
   announcementValidator,
 } from "./lib/content";
 import { announcementEmail } from "./lib/emailTemplates";
@@ -157,10 +158,33 @@ export const getBySlug = query({
 });
 
 export const listAdmin = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    status: v.optional(announcementStatusValidator),
+    search: v.optional(v.string()),
+  },
   returns: paginationResultValidator(announcementValidator),
   handler: async (ctx, args) => {
     await requireRole(ctx, ["staff"]);
+    const { status } = args;
+    const search = args.search?.trim();
+    if (search) {
+      return await ctx.db
+        .query("announcements")
+        .withSearchIndex("search_title", (q) =>
+          status === undefined
+            ? q.search("title", search)
+            : q.search("title", search).eq("status", status),
+        )
+        .paginate(args.paginationOpts);
+    }
+    if (status !== undefined) {
+      return await ctx.db
+        .query("announcements")
+        .withIndex("by_status_and_publishedAt", (q) => q.eq("status", status))
+        .order("desc")
+        .paginate(args.paginationOpts);
+    }
     return await ctx.db
       .query("announcements")
       .order("desc")

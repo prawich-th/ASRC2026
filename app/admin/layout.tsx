@@ -1,5 +1,5 @@
-import AdminShell from "@/components/admin/admin-shell";
+import DashboardShell from "@/components/dashboard/dashboard-shell";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <AdminShell>{children}</AdminShell>;
+  return <DashboardShell staffOnly>{children}</DashboardShell>;
 }

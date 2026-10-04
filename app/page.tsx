@@ -4,7 +4,7 @@ import styles from "./home.module.scss";
 import Button from "@/components/form/button";
 import Link from "next/link";
 import Countdown from "@/components/countdown";
-import { HomeAnnouncements, HomeKeyDates } from "./home-content";
+import { HeroKeyDates, HomeAnnouncements, HomeKeyDates } from "./home-content";
 
 import { api } from "@/convex/_generated/api";
 import { fetchQuery } from "convex/nextjs";
@@ -39,6 +39,8 @@ export default function Home() {
           <UserAction />
         </div>
 
+        <HeroKeyDates />
+
         <div className={styles.arcs}>
           <div className={styles.orange}></div>
           <div className={styles.green}></div>
@@ -47,7 +49,7 @@ export default function Home() {
       </div>
       <div className={styles.info}>
         <div className={styles.date}>
-          <p>14 March 2027</p>
+          <p>10 March 2027</p>
         </div>
         <div className={styles.location}>
           <p>
@@ -102,7 +104,7 @@ export default function Home() {
         <HomeAnnouncements />
 
         <div className={styles.whiteContainer}>
-          <section className={styles.keyDatesSection}>
+          <section id="key-dates" className={styles.keyDatesSection}>
             <div className={styles.sectionHeader + " " + styles.mainPadding}>
               <h2>Key Dates.</h2>
             </div>
