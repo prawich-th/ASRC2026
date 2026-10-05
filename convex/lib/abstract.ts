@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { affiliationValidator } from "./affiliation";
 import { ABSTRACT_CATEGORIES, ABSTRACT_STATUSES } from "../../lib/formOptions";
 
 const abstractCategoryLiterals = ABSTRACT_CATEGORIES.map((category) =>
@@ -25,17 +26,43 @@ export const abstractFileKindValidator = v.union(
   v.literal("supplementary"),
 );
 
+export const richTextOpValidator = v.object({
+  insert: v.string(),
+  attributes: v.optional(
+    v.object({
+      bold: v.optional(v.boolean()),
+      italic: v.optional(v.boolean()),
+      underline: v.optional(v.boolean()),
+      script: v.optional(v.union(v.literal("sub"), v.literal("super"))),
+    }),
+  ),
+});
+
+export const abstractAuthorValidator = v.object({
+  name: v.string(),
+  affiliationId: v.optional(v.id("affiliations")),
+  presenting: v.boolean(),
+});
+
 export const abstractFields = {
   ownerId: v.id("users"),
   code: v.string(),
   title: v.string(),
-  authors: v.optional(v.string()),
+  /** Structured author rows; replaces the legacy free-text `authors`. */
+  authorList: v.optional(v.array(abstractAuthorValidator)),
   advisor: v.optional(v.string()),
+  advisorAffiliationId: v.optional(v.id("affiliations")),
+  /** Formatted abstract text (restricted Quill delta ops). */
+  bodyRich: v.optional(v.array(richTextOpValidator)),
+  /** Plain-text rendering of the abstract, used for search and email. */
   body: v.string(),
   keywords: v.array(v.string()),
   category: v.optional(abstractCategoryValidator),
-  affiliation: v.string(),
+  /** Confirms the author, affiliation, and abstract details are accurate. */
   affiliationDeclared: v.boolean(),
+  // Legacy free-text fields from the template-upload workflow.
+  authors: v.optional(v.string()),
+  affiliation: v.optional(v.string()),
   status: abstractStatusValidator,
   submittedAt: v.optional(v.number()),
   updatedAt: v.number(),
@@ -51,13 +78,16 @@ export const abstractValidator = v.object({
   ownerId: v.id("users"),
   code: v.string(),
   title: v.string(),
-  authors: v.optional(v.string()),
+  authorList: v.optional(v.array(abstractAuthorValidator)),
   advisor: v.optional(v.string()),
+  advisorAffiliationId: v.optional(v.id("affiliations")),
+  bodyRich: v.optional(v.array(richTextOpValidator)),
   body: v.string(),
   keywords: v.array(v.string()),
   category: v.optional(abstractCategoryValidator),
-  affiliation: v.string(),
   affiliationDeclared: v.boolean(),
+  authors: v.optional(v.string()),
+  affiliation: v.optional(v.string()),
   status: abstractStatusValidator,
   submittedAt: v.optional(v.number()),
   updatedAt: v.number(),
@@ -111,6 +141,8 @@ export const abstractFileWithUrlValidator = v.object({
 
 export const abstractDetailValidator = v.object({
   abstract: abstractValidator,
+  /** Every affiliation referenced by the authors and advisor. */
+  affiliations: v.array(affiliationValidator),
   files: v.array(abstractFileWithUrlValidator),
 });
 
@@ -141,5 +173,6 @@ export const adminAbstractSummaryValidator = v.object({
 export const adminAbstractDetailValidator = v.object({
   abstract: adminAbstractValidator,
   owner: abstractOwnerValidator,
+  affiliations: v.array(affiliationValidator),
   files: v.array(abstractFileWithUrlValidator),
 });

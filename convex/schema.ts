@@ -2,6 +2,7 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { abstractFields, abstractFileFields } from "./lib/abstract";
+import { affiliationFields } from "./lib/affiliation";
 import { announcementFields, keyDateFields } from "./lib/content";
 import { notificationCampaignFields } from "./lib/notification";
 import { userFields } from "./lib/profile";
@@ -14,10 +15,15 @@ export default defineSchema({
     .index("phone", ["phone"])
     .index("by_role", ["role"])
     .index("by_wantsNotifications", ["wantsNotifications"])
+    .index("by_affiliationId", ["affiliationId"])
     .searchIndex("search_users", {
       searchField: "searchText",
       filterFields: ["role"],
     }),
+  affiliations: defineTable(affiliationFields)
+    .index("by_status_and_university", ["status", "university"])
+    .index("by_normalizedKey", ["normalizedKey"])
+    .index("by_createdBy_and_status", ["createdBy", "status"]),
   abstracts: defineTable(abstractFields)
     .index("by_ownerId", ["ownerId"])
     .index("by_ownerId_and_status", ["ownerId", "status"])

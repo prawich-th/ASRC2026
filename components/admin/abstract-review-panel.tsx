@@ -1,5 +1,6 @@
 "use client";
 
+import AbstractPreview from "@/components/abstract-editor/abstract-preview";
 import Button from "@/components/form/button";
 import FilePreviewDrawer, { PreviewFile } from "./file-preview-drawer";
 import LoadingScreen from "@/components/layout/loading-screen";
@@ -40,23 +41,29 @@ export default function AbstractReviewPanel({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null);
-  const [selectedCategoryDraft, setSelectedCategory] = useState<AbstractCategory | "" | null>(null);
+  const [selectedCategoryDraft, setSelectedCategory] = useState<
+    AbstractCategory | "" | null
+  >(null);
 
   async function save(decision?: Decision) {
     if (!detail) {
       return;
     }
-    const privateNotes = privateNotesDraft ?? detail.abstract.privateNotes ?? "";
+    const privateNotes =
+      privateNotesDraft ?? detail.abstract.privateNotes ?? "";
     const submitterFeedback =
       feedbackDraft ?? detail.abstract.submitterFeedback ?? "";
-    const selectedCategory = selectedCategoryDraft ?? detail.abstract.category ?? "";
+    const selectedCategory =
+      selectedCategoryDraft ?? detail.abstract.category ?? "";
 
     if (decision === "revision_requested" && !submitterFeedback.trim()) {
       setMessage("Add feedback explaining the required revisions.");
       return;
     }
     if (decision === "selected" && !selectedCategory) {
-      setMessage("Select an oral or poster presentation category before approval.");
+      setMessage(
+        "Select an oral or poster presentation category before approval.",
+      );
       return;
     }
 
@@ -68,7 +75,8 @@ export default function AbstractReviewPanel({
         privateNotes,
         submitterFeedback,
         decision,
-        category: decision === "selected" ? selectedCategory || undefined : undefined,
+        category:
+          decision === "selected" ? selectedCategory || undefined : undefined,
       });
       if (decision) {
         onDecided?.(abstractId);
@@ -77,7 +85,9 @@ export default function AbstractReviewPanel({
         setMessage("Review notes saved.");
       }
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : "Could not save review.");
+      setMessage(
+        caught instanceof Error ? caught.message : "Could not save review.",
+      );
     } finally {
       setSaving(false);
     }
@@ -97,7 +107,8 @@ export default function AbstractReviewPanel({
   const privateNotes = privateNotesDraft ?? detail.abstract.privateNotes ?? "";
   const submitterFeedback =
     feedbackDraft ?? detail.abstract.submitterFeedback ?? "";
-  const selectedCategory = selectedCategoryDraft ?? detail.abstract.category ?? "";
+  const selectedCategory =
+    selectedCategoryDraft ?? detail.abstract.category ?? "";
   const canDecide = detail.abstract.status === "submitted";
 
   return (
@@ -120,34 +131,27 @@ export default function AbstractReviewPanel({
             <dd>{detail.owner.name || detail.owner.email || "Unknown"}</dd>
           </div>
           <div>
-            <dt>Author(s)</dt>
-            <dd>{detail.abstract.authors || "Not provided"}</dd>
-          </div>
-          <div>
-            <dt>Faculty Advisor</dt>
-            <dd>{detail.abstract.advisor || "Not provided"}</dd>
-          </div>
-          <div>
-            <dt>Affiliations</dt>
-            <dd>{detail.abstract.affiliation}</dd>
+            <dt>Presenting author</dt>
+            <dd>
+              {detail.abstract.authorList?.find((author) => author.presenting)
+                ?.name ?? "Not specified"}
+            </dd>
           </div>
           <div>
             <dt>Category</dt>
             <dd>{getCategoryLabel(detail.abstract.category)}</dd>
           </div>
-          <div>
-            <dt>Keywords</dt>
-            <dd>{detail.abstract.keywords.join(", ")}</dd>
-          </div>
         </dl>
-        <div className={styles.article}>{detail.abstract.body}</div>
+        <AbstractPreview
+          abstract={detail.abstract}
+          affiliations={detail.affiliations}
+          showWordCount
+        />
       </section>
 
-      <section className={`${styles.card} ${styles.stack}`}>
-        <h2>Submission files</h2>
-        {detail.files.length === 0 ? (
-          <p>No supporting files.</p>
-        ) : (
+      {detail.files.length > 0 ? (
+        <section className={`${styles.card} ${styles.stack}`}>
+          <h2>Legacy submission files</h2>
           <ul className={styles.fileList}>
             {detail.files.map((file) => (
               <li key={file._id}>
@@ -170,8 +174,8 @@ export default function AbstractReviewPanel({
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      ) : null}
 
       <section className={`${styles.card} ${styles.stack}`}>
         <h2>Review decision</h2>
@@ -217,18 +221,38 @@ export default function AbstractReviewPanel({
           </p>
         ) : null}
         <div className={styles.reviewActions}>
-          <Button className="action" disabled={saving} type="button" onClick={() => void save()}>
+          <Button
+            className="action"
+            disabled={saving}
+            type="button"
+            onClick={() => void save()}
+          >
             Save notes
           </Button>
           {canDecide ? (
             <>
-              <Button className="action" disabled={saving} type="button" onClick={() => void save("revision_requested")}>
+              <Button
+                className="action"
+                disabled={saving}
+                type="button"
+                onClick={() => void save("revision_requested")}
+              >
                 Send back for edit
               </Button>
-              <Button className="destructive" disabled={saving} type="button" onClick={() => void save("rejected")}>
+              <Button
+                className="destructive"
+                disabled={saving}
+                type="button"
+                onClick={() => void save("rejected")}
+              >
                 Reject
               </Button>
-              <Button className="green" disabled={saving} type="button" onClick={() => void save("selected")}>
+              <Button
+                className="green"
+                disabled={saving}
+                type="button"
+                onClick={() => void save("selected")}
+              >
                 Select for presentation
               </Button>
             </>

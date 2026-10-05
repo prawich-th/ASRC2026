@@ -109,6 +109,12 @@
   grid-column: 1 / -1;
 }
 
+.legacyHint {
+  margin: 0.45rem 0 0;
+  color: #8a5a17;
+  font-size: 0.85rem;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

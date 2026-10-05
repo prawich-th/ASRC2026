@@ -40,6 +40,12 @@ export default function MyAbstractsPage() {
           <ul className={styles.abstractList}>
             {abstracts.map((abstract) => {
               const tone = getAbstractStatusTone(abstract.status);
+              const title = abstract.title || "Untitled abstract";
+              // Drafts open straight in the editor.
+              const href =
+                abstract.status === "draft"
+                  ? `/abstracts/${abstract._id}/edit`
+                  : `/abstracts/${abstract._id}`;
               return (
                 <li key={abstract._id} className={styles.abstractItem}>
                   <div className={`${styles.status} ${styles[tone]}`}>
@@ -49,12 +55,12 @@ export default function MyAbstractsPage() {
                     <span className={styles.category}>
                       {getCategoryLabel(abstract.category)}
                     </span>
-                    <h3>{abstract.title}</h3>
+                    <h3>{title}</h3>
                   </div>
                   <Link
-                    href={`/abstracts/${abstract._id}`}
+                    href={href}
                     className={styles.chevron}
-                    aria-label={`View ${abstract.title}`}
+                    aria-label={`Open ${title}`}
                   >
                     <i className="bx bx-chevron-right" aria-hidden="true" />
                   </Link>

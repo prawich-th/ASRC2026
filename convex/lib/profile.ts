@@ -49,6 +49,8 @@ export const userFields = {
   lastName: v.optional(v.string()),
   suffix: v.optional(v.string()),
   specialty: v.optional(v.string()),
+  affiliationId: v.optional(v.id("affiliations")),
+  /** Denormalized from the affiliation for search, import, and display. */
   institution: v.optional(v.string()),
   position: v.optional(v.string()),
   department: v.optional(v.string()),
