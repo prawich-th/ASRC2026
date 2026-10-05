@@ -74,17 +74,25 @@ export default function GuidelinesPage() {
 
       <h3>Authors</h3>
       <p>
-        Provide the full names of all authors involved in the project. The
-        presenting author and faculty advisor must be clearly identified.
+        Add each author in publication order with their full name and
+        affiliation. The presenting author and faculty advisor must be clearly
+        identified.
       </p>
 
       <h3>Affiliations</h3>
       <p>
-        List the relevant institution, department, program, or research
-        organization for each author.
+        Choose each author&apos;s affiliation (department, faculty, university or
+        office, district, province, and country) from the shared list. If an
+        affiliation is missing, add it from the selector and the organising
+        committee will verify it.
       </p>
 
       <h3>Abstract Content</h3>
+      <p>
+        The abstract is written directly on the website and must not exceed
+        250 words. Italics, bold, underline, and sub/superscript formatting are
+        available.
+      </p>
       <ol>
         <li>
           <strong>Introduction / Background:</strong> Briefly describe the
@@ -117,14 +125,17 @@ export default function GuidelinesPage() {
       <h3>Keywords</h3>
       <p>Provide relevant keywords describing the research.</p>
 
-      <h2>File Submission Requirements</h2>
-      <p>The final submission must be uploaded in PDF format.</p>
+      <h2>Submission Requirements</h2>
+      <p>
+        All abstracts are prepared and submitted through the online editor; no
+        template or file upload is required. Drafts save automatically and can
+        be edited until they are submitted.
+      </p>
       <p>Participants are responsible for ensuring that:</p>
       <ul>
-        <li>The submitted document follows the official ASRC template.</li>
+        <li>The abstract is no longer than 250 words.</li>
         <li>All required sections are included.</li>
-        <li>Figures, tables, and references are clearly presented.</li>
-        <li>The PDF can be opened and viewed correctly.</li>
+        <li>Every author is listed with the correct affiliation.</li>
         <li>The submitted version has been reviewed by the academic advisor.</li>
         <li>
           The research complies with applicable ethical and academic
@@ -132,8 +143,8 @@ export default function GuidelinesPage() {
         </li>
       </ul>
       <p>
-        Files that do not comply with the official submission requirements may
-        be returned for correction or excluded from consideration.
+        Submissions that do not comply with the requirements may be returned
+        for correction or excluded from consideration.
       </p>
 
       <h2>Research Ethics and Academic Integrity</h2>

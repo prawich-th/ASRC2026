@@ -3,7 +3,22 @@ import {
   paginationOptsValidator,
   paginationResultValidator,
 } from "convex/server";
-import { v } from "convex/values";
+import { Infer, v } from "convex/values";
+import {
+  getAbstractProblems,
+  MAX_ABSTRACT_AUTHORS,
+  MAX_ABSTRACT_KEYWORDS,
+  MAX_ABSTRACT_TITLE_LENGTH,
+  normalizeKeywords,
+} from "../lib/abstractForm";
+import {
+  ABSTRACT_DRAFT_WORD_CEILING,
+  ABSTRACT_WORD_LIMIT,
+  countWords,
+  RICH_TEXT_MAX_OPS,
+  richTextToPlainText,
+  sanitizeRichTextOps,
+} from "../lib/richText";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import {
@@ -14,17 +29,17 @@ import {
   QueryCtx,
 } from "./_generated/server";
 import {
+  abstractAuthorValidator,
   abstractCategoryValidator,
   abstractDetailValidator,
-  abstractFileValidator,
-  abstractFileWithUrlValidator,
-  abstractFileKindValidator,
   abstractSummaryValidator,
   abstractValidator,
   adminAbstractDetailValidator,
   adminAbstractSummaryValidator,
   adminAbstractValidator,
+  richTextOpValidator,
 } from "./lib/abstract";
+import { requireAffiliation, resolveAffiliation } from "./lib/affiliation";
 import { getCurrentUser, requireRole } from "./lib/auth";
 import {
   abstractDecisionEmail,
@@ -34,14 +49,6 @@ import {
   getSiteUrl,
   queueTransactionalEmail,
 } from "./notifications";
-
-type StorageMetadata = {
-  _id: Id<"_storage">;
-  _creationTime: number;
-  contentType?: string;
-  sha256: string;
-  size: number;
-};
 
 const ABSTRACT_CODE_PATTERN = /^\d{6}$/;
 const ABSTRACT_CODE_ATTEMPTS = 20;
@@ -83,18 +90,141 @@ function toOwnerAbstract(abstract: Doc<"abstracts">) {
     ownerId: abstract.ownerId,
     code: abstract.code ?? "",
     title: abstract.title,
-    authors: abstract.authors,
+    authorList: abstract.authorList,
     advisor: abstract.advisor,
+    advisorAffiliationId: abstract.advisorAffiliationId,
+    bodyRich: abstract.bodyRich,
     body: abstract.body,
     keywords: abstract.keywords,
     category: abstract.category,
-    affiliation: abstract.affiliation,
     affiliationDeclared: abstract.affiliationDeclared,
+    authors: abstract.authors,
+    affiliation: abstract.affiliation,
     status: abstract.status,
     submittedAt: abstract.submittedAt,
     updatedAt: abstract.updatedAt,
     submitterFeedback: abstract.submitterFeedback,
     reviewedAt: abstract.reviewedAt,
+  };
+}
+
+/**
+ * Rewrites affiliation references to their surviving (post-merge) records
+ * and returns the referenced affiliations for display.
+ */
+async function withAffiliations(
+  ctx: QueryCtx,
+  abstract: Doc<"abstracts">,
+): Promise<{ abstract: Doc<"abstracts">; affiliations: Doc<"affiliations">[] }> {
+  const resolved = new Map<Id<"affiliations">, Doc<"affiliations"> | null>();
+  async function resolve(id: Id<"affiliations"> | undefined) {
+    if (!id) return undefined;
+    if (!resolved.has(id)) {
+      resolved.set(id, await resolveAffiliation(ctx, id));
+    }
+    return resolved.get(id)?._id;
+  }
+
+  const authorList = abstract.authorList
+    ? await Promise.all(
+        abstract.authorList.map(async (author) => ({
+          ...author,
+          affiliationId: await resolve(author.affiliationId),
+        })),
+      )
+    : undefined;
+  const advisorAffiliationId = await resolve(abstract.advisorAffiliationId);
+
+  const affiliations = new Map<Id<"affiliations">, Doc<"affiliations">>();
+  for (const affiliation of resolved.values()) {
+    if (affiliation) affiliations.set(affiliation._id, affiliation);
+  }
+  return {
+    abstract: { ...abstract, authorList, advisorAffiliationId },
+    affiliations: [...affiliations.values()],
+  };
+}
+
+const draftValidator = v.object({
+  title: v.string(),
+  authorList: v.array(abstractAuthorValidator),
+  advisor: v.string(),
+  advisorAffiliationId: v.optional(v.id("affiliations")),
+  bodyRich: v.array(richTextOpValidator),
+  keywords: v.array(v.string()),
+  affiliationDeclared: v.boolean(),
+});
+type DraftArgs = Infer<typeof draftValidator>;
+
+/** Validates and normalizes editor input. Incomplete drafts are allowed. */
+async function normalizeDraft(ctx: MutationCtx, args: DraftArgs) {
+  const title = args.title.replace(/\s+/g, " ").trim();
+  if (title.length > MAX_ABSTRACT_TITLE_LENGTH) {
+    throw new Error(
+      `The title must be at most ${MAX_ABSTRACT_TITLE_LENGTH} characters`,
+    );
+  }
+
+  const rows = args.authorList.filter(
+    (author) => author.name.trim() || author.affiliationId,
+  );
+  if (rows.length > MAX_ABSTRACT_AUTHORS) {
+    throw new Error(`An abstract can list at most ${MAX_ABSTRACT_AUTHORS} authors`);
+  }
+  let presentingAssigned = false;
+  const authorList = [];
+  for (const author of rows) {
+    const name = author.name.replace(/\s+/g, " ").trim();
+    if (name.length > 200) {
+      throw new Error("Author names must be at most 200 characters");
+    }
+    const presenting: boolean = author.presenting && !presentingAssigned;
+    presentingAssigned ||= presenting;
+    authorList.push({
+      name,
+      affiliationId: author.affiliationId
+        ? (await requireAffiliation(ctx, author.affiliationId))._id
+        : undefined,
+      presenting,
+    });
+  }
+
+  const advisor = args.advisor.replace(/\s+/g, " ").trim();
+  if (advisor.length > 200) {
+    throw new Error("The advisor name must be at most 200 characters");
+  }
+  const advisorAffiliationId = args.advisorAffiliationId
+    ? (await requireAffiliation(ctx, args.advisorAffiliationId))._id
+    : undefined;
+
+  const bodyRich = sanitizeRichTextOps(args.bodyRich);
+  if (bodyRich.length > RICH_TEXT_MAX_OPS) {
+    throw new Error("The abstract has too much formatting to save");
+  }
+  const body = richTextToPlainText(bodyRich);
+  if (countWords(body) > ABSTRACT_DRAFT_WORD_CEILING) {
+    throw new Error(
+      `The abstract is far over the ${ABSTRACT_WORD_LIMIT}-word limit`,
+    );
+  }
+
+  const keywords = normalizeKeywords(args.keywords);
+  if (keywords.length > MAX_ABSTRACT_KEYWORDS) {
+    throw new Error(`Use at most ${MAX_ABSTRACT_KEYWORDS} keywords`);
+  }
+  if (keywords.some((keyword) => keyword.length > 60)) {
+    throw new Error("Keywords must be at most 60 characters each");
+  }
+
+  return {
+    title,
+    authorList,
+    advisor,
+    advisorAffiliationId,
+    bodyRich,
+    body,
+    keywords,
+    affiliationDeclared: args.affiliationDeclared,
   };
 }
 
@@ -107,12 +237,6 @@ function toAbstractOwner(user: Doc<"users">) {
     lastName: user.lastName,
     institution: user.institution,
   };
-}
-
-function normalizeKeywords(keywords: string[]): string[] {
-  return keywords
-    .map((keyword) => keyword.trim())
-    .filter((keyword) => keyword.length > 0);
 }
 
 function canOwnerEdit(status: Doc<"abstracts">["status"]): boolean {
@@ -187,47 +311,27 @@ export const getMineById = query({
     }
 
     const files = await getAbstractFilesWithUrls(ctx, abstract._id);
-    return { abstract: toOwnerAbstract(abstract), files };
-  },
-});
-
-export const listFilesForAbstract = query({
-  args: { abstractId: v.id("abstracts") },
-  returns: v.array(abstractFileWithUrlValidator),
-  handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    await getOwnedAbstractOrThrow(ctx, user._id, args.abstractId);
-    return await getAbstractFilesWithUrls(ctx, args.abstractId);
+    const resolved = await withAffiliations(ctx, abstract);
+    return {
+      abstract: toOwnerAbstract(resolved.abstract),
+      affiliations: resolved.affiliations,
+      files,
+    };
   },
 });
 
 export const createDraft = mutation({
-  args: {
-    title: v.string(),
-    authors: v.string(),
-    advisor: v.string(),
-    body: v.string(),
-    keywords: v.array(v.string()),
-    affiliation: v.string(),
-    affiliationDeclared: v.boolean(),
-  },
+  args: draftValidator.fields,
   returns: abstractValidator,
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    const keywords = normalizeKeywords(args.keywords);
-    const now = Date.now();
+    const draft = await normalizeDraft(ctx, args);
     const abstractId = await ctx.db.insert("abstracts", {
       ownerId: user._id,
       code: await allocateAbstractCode(ctx),
-      title: args.title.trim(),
-      authors: args.authors.trim(),
-      advisor: args.advisor.trim(),
-      body: args.body.trim(),
-      keywords,
-      affiliation: args.affiliation.trim(),
-      affiliationDeclared: args.affiliationDeclared,
+      ...draft,
       status: "draft",
-      updatedAt: now,
+      updatedAt: Date.now(),
     });
 
     const abstract = await ctx.db.get("abstracts", abstractId);
@@ -240,32 +344,17 @@ export const createDraft = mutation({
 });
 
 export const updateDraft = mutation({
-  args: {
-    abstractId: v.id("abstracts"),
-    title: v.string(),
-    authors: v.string(),
-    advisor: v.string(),
-    body: v.string(),
-    keywords: v.array(v.string()),
-    affiliation: v.string(),
-    affiliationDeclared: v.boolean(),
-  },
+  args: { abstractId: v.id("abstracts"), ...draftValidator.fields },
   returns: abstractValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, { abstractId, ...args }) => {
     const user = await getCurrentUser(ctx);
-    const abstract = await getOwnedAbstractOrThrow(ctx, user._id, args.abstractId);
+    const abstract = await getOwnedAbstractOrThrow(ctx, user._id, abstractId);
     if (!canOwnerEdit(abstract.status)) {
       throw new Error("Only drafts or revision requests can be edited");
     }
 
     await ctx.db.patch("abstracts", abstract._id, {
-      title: args.title.trim(),
-      authors: args.authors.trim(),
-      advisor: args.advisor.trim(),
-      body: args.body.trim(),
-      keywords: normalizeKeywords(args.keywords),
-      affiliation: args.affiliation.trim(),
-      affiliationDeclared: args.affiliationDeclared,
+      ...(await normalizeDraft(ctx, args)),
       updatedAt: Date.now(),
     });
 
@@ -275,6 +364,28 @@ export const updateDraft = mutation({
     }
 
     return toOwnerAbstract(updatedAbstract);
+  },
+});
+
+export const deleteDraft = mutation({
+  args: { abstractId: v.id("abstracts") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const abstract = await getOwnedAbstractOrThrow(ctx, user._id, args.abstractId);
+    if (abstract.status !== "draft") {
+      throw new Error("Only unsubmitted drafts can be deleted");
+    }
+    const files = await ctx.db
+      .query("abstractFiles")
+      .withIndex("by_abstractId", (q) => q.eq("abstractId", abstract._id))
+      .take(100);
+    for (const file of files) {
+      await ctx.storage.delete(file.storageId);
+      await ctx.db.delete("abstractFiles", file._id);
+    }
+    await ctx.db.delete("abstracts", abstract._id);
+    return null;
   },
 });
 
@@ -288,32 +399,26 @@ export const submitDraft = mutation({
     if (!canOwnerEdit(abstract.status)) {
       throw new Error("Only drafts or revision requests can be submitted");
     }
-    if (
-      !abstract.title.trim() ||
-      !abstract.authors?.trim() ||
-      !abstract.advisor?.trim() ||
-      !abstract.body.trim()
-    ) {
-      throw new Error("Please complete all required abstract fields");
+    const authorList = abstract.authorList ?? [];
+    const problems = getAbstractProblems({
+      title: abstract.title,
+      authorList,
+      advisor: abstract.advisor ?? "",
+      advisorAffiliationId: abstract.advisorAffiliationId,
+      bodyText: abstract.body,
+      keywords: abstract.keywords,
+      affiliationDeclared: abstract.affiliationDeclared,
+    });
+    if (problems.length > 0) {
+      throw new Error(problems.map((problem) => problem.message).join(" "));
     }
-    if (abstract.keywords.length === 0) {
-      throw new Error("Please provide at least one keyword");
-    }
-    if (!abstract.affiliationDeclared) {
-      throw new Error("Please declare your affiliation before submission");
-    }
-    const paperFiles = await ctx.db
-      .query("abstractFiles")
-      .withIndex("by_abstractId", (q) => q.eq("abstractId", abstract._id))
-      .take(100);
-    if (
-      !paperFiles.some(
-        (file) =>
-          file.fileName.toLocaleLowerCase().endsWith(".pdf") &&
-          (file.kind === "paper" || file.kind === undefined),
-      )
-    ) {
-      throw new Error("Please upload the completed paper as a PDF before submission");
+    for (const affiliationId of [
+      ...authorList.map((author) => author.affiliationId),
+      abstract.advisorAffiliationId,
+    ]) {
+      if (affiliationId) {
+        await requireAffiliation(ctx, affiliationId);
+      }
     }
 
     const now = Date.now();
@@ -340,104 +445,6 @@ export const submitDraft = mutation({
       }),
     );
     return toOwnerAbstract(submittedAbstract);
-  },
-});
-
-export const generateUploadUrl = mutation({
-  args: {},
-  returns: v.string(),
-  handler: async (ctx) => {
-    await getCurrentUser(ctx);
-    return await ctx.storage.generateUploadUrl();
-  },
-});
-
-export const attachUploadedFile = mutation({
-  args: {
-    abstractId: v.id("abstracts"),
-    storageId: v.id("_storage"),
-    fileName: v.string(),
-    kind: abstractFileKindValidator,
-  },
-  returns: abstractFileValidator,
-  handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    const abstract = await getOwnedAbstractOrThrow(ctx, user._id, args.abstractId);
-    if (!canOwnerEdit(abstract.status)) {
-      throw new Error("Files can only be uploaded while an abstract is editable");
-    }
-
-    const metadata = await ctx.db.system.get(
-      "_storage",
-      args.storageId,
-    ) as StorageMetadata | null;
-    if (!metadata) {
-      throw new Error("Uploaded file was not found");
-    }
-    const normalizedFileName = args.fileName.trim().toLocaleLowerCase();
-    const supplementaryExtensions = [
-      ".pdf",
-      ".doc",
-      ".docx",
-      ".xls",
-      ".xlsx",
-      ".csv",
-      ".png",
-      ".jpg",
-      ".jpeg",
-      ".zip",
-    ];
-    if (args.kind === "paper" && !normalizedFileName.endsWith(".pdf")) {
-      await ctx.storage.delete(args.storageId);
-      throw new Error("The paper file must be uploaded as a PDF");
-    }
-    if (
-      args.kind === "supplementary" &&
-      !supplementaryExtensions.some((extension) =>
-        normalizedFileName.endsWith(extension),
-      )
-    ) {
-      await ctx.storage.delete(args.storageId);
-      throw new Error("This supplementary file format is not supported");
-    }
-
-    const fileId = await ctx.db.insert("abstractFiles", {
-      ownerId: user._id,
-      abstractId: args.abstractId,
-      storageId: args.storageId,
-      fileName: args.fileName.trim(),
-      kind: args.kind,
-      contentType: metadata.contentType,
-      size: metadata.size,
-      uploadedAt: Date.now(),
-    });
-
-    const file = await ctx.db.get("abstractFiles", fileId);
-    if (!file) {
-      throw new Error("Could not save file");
-    }
-    return file;
-  },
-});
-
-export const removeFile = mutation({
-  args: { fileId: v.id("abstractFiles") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    const file = await ctx.db.get("abstractFiles", args.fileId);
-    if (!file || file.ownerId !== user._id) {
-      throw new Error("File not found");
-    }
-
-    const abstract = await getOwnedAbstractOrThrow(ctx, user._id, file.abstractId);
-    if (!canOwnerEdit(abstract.status)) {
-      throw new Error("Files can only be removed while an abstract is editable");
-    }
-
-    await ctx.storage.delete(file.storageId);
-    await ctx.db.delete("abstractFiles", file._id);
-    return null;
   },
 });
 
@@ -559,7 +566,13 @@ export const getForReview = query({
       throw new Error("Abstract owner not found");
     }
     const files = await getAbstractFilesWithUrls(ctx, abstract._id);
-    return { abstract, owner: toAbstractOwner(owner), files };
+    const resolved = await withAffiliations(ctx, abstract);
+    return {
+      abstract: resolved.abstract,
+      owner: toAbstractOwner(owner),
+      affiliations: resolved.affiliations,
+      files,
+    };
   },
 });
 

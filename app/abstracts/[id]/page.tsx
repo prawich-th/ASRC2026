@@ -1,5 +1,6 @@
 "use client";
 
+import AbstractPreview from "@/components/abstract-editor/abstract-preview";
 import Button from "@/components/form/button";
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
@@ -104,10 +105,6 @@ export default function AbstractViewPage() {
                   <strong>Category</strong>
                   <span>{getCategoryLabel(detail.abstract.category)}</span>
                 </li>
-                <li>
-                  <strong>Affiliations</strong>
-                  <span>{detail.abstract.affiliation}</span>
-                </li>
               </ul>
             </div>
 
@@ -148,7 +145,7 @@ export default function AbstractViewPage() {
 
           <section className={styles.card}>
             <div className={styles.headerRow}>
-              <h2>Submission Content</h2>
+              <h2>Your Abstract</h2>
               {detail.abstract.status === "draft" ||
               detail.abstract.status === "revision_requested" ? (
                 <Link href={`/abstracts/${detail.abstract._id}/edit`}>
@@ -160,28 +157,15 @@ export default function AbstractViewPage() {
                 </Link>
               ) : null}
             </div>
-            <h2>Authors</h2>
-            <p className={styles.preserveLines}>
-              {detail.abstract.authors || "Not provided"}
-            </p>
-            <h2>Faculty Advisor</h2>
-            <p className={styles.preserveLines}>
-              {detail.abstract.advisor || "Not provided"}
-            </p>
-            <h2>Abstract Content</h2>
-            <p className={styles.preserveLines}>{detail.abstract.body}</p>
-
-            <h2>Keywords</h2>
-            <p className={styles.keywordsPreview}>
-              {detail.abstract.keywords.map((keyword) => (
-                <span key={keyword}>{keyword}</span>
-              ))}
-            </p>
+            <AbstractPreview
+              abstract={detail.abstract}
+              affiliations={detail.affiliations}
+            />
           </section>
 
-          <section className={styles.card}>
-            <h2>Submission Files</h2>
-            {detail.files.length > 0 ? (
+          {detail.files.length > 0 ? (
+            <section className={styles.card}>
+              <h2>Files from the previous submission system</h2>
               <ul className={styles.supportingList}>
                 {detail.files.map((file) => (
                   <li key={file._id} className={styles.supportingItem}>
@@ -192,7 +176,9 @@ export default function AbstractViewPage() {
                     <div className={styles.content}>
                       <strong>{file.fileName}</strong>
                       <span className={styles.fileKind}>
-                        {file.kind === "supplementary" ? "Supplementary" : "Paper"}
+                        {file.kind === "supplementary"
+                          ? "Supplementary"
+                          : "Paper"}
                       </span>
                       <span>
                         Uploaded: {formatDate(file.uploadedAt)} (
@@ -213,10 +199,8 @@ export default function AbstractViewPage() {
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className={styles.emptyState}>No files uploaded.</p>
-            )}
-          </section>
+            </section>
+          ) : null}
         </div>
       </main>
       <Footer />

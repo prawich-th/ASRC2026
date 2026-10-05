@@ -215,52 +215,25 @@ describe("tiered administration", () => {
       });
     });
     const participant = t.withIdentity({ subject: ids.participant });
+    const affiliationId = await t.run(async (ctx) => {
+      return await ctx.db.insert("affiliations", {
+        university: "Thammasat University",
+        country: "Thailand",
+        status: "verified",
+        normalizedKey: "||thammasat university|||thailand",
+        updatedAt: 0,
+      });
+    });
     const draft = await participant.mutation(api.abstracts.createDraft, {
       title: "Transactional Receipt Study",
-      authors: "Arun Researcher",
+      authorList: [{ name: "Arun Researcher", affiliationId, presenting: true }],
       advisor: "Dr Faculty Advisor",
-      body: "Completed abstract body",
+      advisorAffiliationId: affiliationId,
+      bodyRich: [{ insert: "Completed abstract body\n" }],
       keywords: ["email", "notification", "research"],
-      affiliation: "CICM",
       affiliationDeclared: true,
     });
     expect(draft.code).toMatch(/^\d{6}$/);
-
-    await t.run(async (ctx) => {
-      const storageId = await ctx.storage.store(
-        new Blob(["supplement"], { type: "application/pdf" }),
-      );
-      await ctx.db.insert("abstractFiles", {
-        ownerId: ids.participant,
-        abstractId: draft._id,
-        storageId,
-        fileName: "supplement.pdf",
-        kind: "supplementary",
-        contentType: "application/pdf",
-        size: 10,
-        uploadedAt: 90,
-      });
-    });
-
-    await expect(
-      participant.mutation(api.abstracts.submitDraft, { abstractId: draft._id }),
-    ).rejects.toThrow("upload the completed paper as a PDF");
-
-    await t.run(async (ctx) => {
-      const storageId = await ctx.storage.store(
-        new Blob(["paper"], { type: "application/pdf" }),
-      );
-      await ctx.db.insert("abstractFiles", {
-        ownerId: ids.participant,
-        abstractId: draft._id,
-        storageId,
-        fileName: "paper.pdf",
-        kind: "paper",
-        contentType: "application/pdf",
-        size: 5,
-        uploadedAt: 100,
-      });
-    });
 
     const submitted = await participant.mutation(
       api.abstracts.submitDraft,
@@ -338,30 +311,25 @@ describe("tiered administration", () => {
     expect(returned?.abstract.submitterFeedback).toContain("clarify");
     expect(returned?.abstract).not.toHaveProperty("privateNotes");
 
+    const affiliationId = await t.run(async (ctx) => {
+      return await ctx.db.insert("affiliations", {
+        faculty: "CICM",
+        university: "Thammasat University",
+        country: "Thailand",
+        status: "verified",
+        normalizedKey: "|cicm|thammasat university|||thailand",
+        updatedAt: 0,
+      });
+    });
     await participant.mutation(api.abstracts.updateDraft, {
       abstractId,
       title: "Revision Study",
-      authors: "Arun Researcher",
+      authorList: [{ name: "Arun Researcher", affiliationId, presenting: true }],
       advisor: "Dr Faculty Advisor",
-      body: "Revised body with clearer methods",
+      advisorAffiliationId: affiliationId,
+      bodyRich: [{ insert: "Revised body with clearer methods\n" }],
       keywords: ["research", "methods", "revision"],
-      affiliation: "CICM",
       affiliationDeclared: true,
-    });
-    await t.run(async (ctx) => {
-      const storageId = await ctx.storage.store(
-        new Blob(["paper"], { type: "application/pdf" }),
-      );
-      await ctx.db.insert("abstractFiles", {
-        ownerId: ids.participant,
-        abstractId,
-        storageId,
-        fileName: "revised-paper.pdf",
-        kind: "paper",
-        contentType: "application/pdf",
-        size: 5,
-        uploadedAt: 200,
-      });
     });
     const resubmitted = await participant.mutation(api.abstracts.submitDraft, {
       abstractId,

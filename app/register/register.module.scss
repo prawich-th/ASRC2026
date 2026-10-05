@@ -265,11 +265,11 @@
   grid-column: 1 / -1 !important;
 }
 
-.medicalInstitutionField {
-  > div {
-    display: grid;
-    gap: 0.4rem;
-  }
+.fieldHint {
+  margin: 0;
+  color: #6b6760;
+  font-size: 0.83rem;
+  font-weight: 400;
 }
 
 .card input:not([type="checkbox"]),

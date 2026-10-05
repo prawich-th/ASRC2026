@@ -1,3 +1,4 @@
+import { formatAffiliation } from "./affiliation";
 import { ABSTRACT_STATUSES } from "./formOptions";
 
 export type AbstractStatus = (typeof ABSTRACT_STATUSES)[number];
@@ -60,4 +61,51 @@ export function getCategoryLabel(category?: string): string {
     return "Poster Presentation";
   }
   return category || "To be assigned";
+}
+
+type CreditAffiliation = Parameters<typeof formatAffiliation>[0] & {
+  _id: string;
+};
+
+export type AuthorCredits = {
+  authors: Array<{ name: string; number?: number; presenting: boolean }>;
+  advisor?: { name: string; number?: number };
+  affiliations: Array<{ number: number; label: string }>;
+};
+
+/** Numbers affiliations in order of first appearance, as printed in proceedings. */
+export function buildAuthorCredits(
+  authorList: ReadonlyArray<{
+    name: string;
+    affiliationId?: string;
+    presenting: boolean;
+  }>,
+  advisor: { name: string; affiliationId?: string } | undefined,
+  affiliations: ReadonlyArray<CreditAffiliation>,
+): AuthorCredits {
+  const byId = new Map(affiliations.map((item) => [item._id, item]));
+  const numbers = new Map<string, number>();
+  const listed: AuthorCredits["affiliations"] = [];
+
+  function numberFor(affiliationId: string | undefined) {
+    const affiliation = affiliationId ? byId.get(affiliationId) : undefined;
+    if (!affiliation) return undefined;
+    let number = numbers.get(affiliation._id);
+    if (number === undefined) {
+      number = listed.length + 1;
+      numbers.set(affiliation._id, number);
+      listed.push({ number, label: formatAffiliation(affiliation) });
+    }
+    return number;
+  }
+
+  const authors = authorList.map((author) => ({
+    name: author.name,
+    number: numberFor(author.affiliationId),
+    presenting: author.presenting,
+  }));
+  const advisorCredit = advisor?.name
+    ? { name: advisor.name, number: numberFor(advisor.affiliationId) }
+    : undefined;
+  return { authors, advisor: advisorCredit, affiliations: listed };
 }

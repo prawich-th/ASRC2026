@@ -1,5 +1,6 @@
 "use client";
 
+import AffiliationPicker from "@/components/affiliations/affiliation-picker";
 import Button from "@/components/form/button";
 import { FormField, SelectField } from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
@@ -22,8 +23,7 @@ type ProfileDraft = {
   otherName: string;
   lastName: string;
   suffix: string;
-  institution: string;
-  department: string;
+  affiliationId?: Id<"affiliations">;
   position: string;
 };
 
@@ -53,8 +53,7 @@ export default function ProfilePage() {
       otherName: user.otherName ?? "",
       lastName: user.lastName ?? "",
       suffix: user.suffix ?? "",
-      institution: user.institution ?? "",
-      department: user.department ?? "",
+      affiliationId: user.affiliationId,
       position: user.position ?? "",
     };
   }, [user]);
@@ -68,7 +67,7 @@ export default function ProfilePage() {
     return (
       formValues.firstName.trim().length > 0 &&
       formValues.lastName.trim().length > 0 &&
-      formValues.institution.trim().length > 0
+      formValues.affiliationId !== undefined
     );
   }, [formValues]);
 
@@ -79,9 +78,9 @@ export default function ProfilePage() {
       setError("Profile data is unavailable. Please refresh this page.");
       return;
     }
-    if (!formReady) {
+    if (!formReady || !formValues.affiliationId) {
       setError(
-        "Please complete prefix, first name, last name, and institution.",
+        "Please complete prefix, first name, last name, and affiliation.",
       );
       return;
     }
@@ -96,10 +95,7 @@ export default function ProfilePage() {
           : undefined,
         lastName: formValues.lastName,
         suffix: formValues.suffix.trim() ? formValues.suffix : undefined,
-        institution: formValues.institution,
-        department: formValues.department.trim()
-          ? formValues.department
-          : undefined,
+        affiliationId: formValues.affiliationId,
         position: formValues.position.trim() ? formValues.position : undefined,
       });
       setDraft(null);
@@ -293,27 +289,28 @@ export default function ProfilePage() {
                   }))
                 }
               />
-              <FormField
-                label="Institution"
-                className={styles.fullWidth}
-                value={formValues.institution}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    institution: event.target.value,
-                  }))
-                }
-              />
-              <FormField
-                label="Department / Program"
-                value={formValues.department}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    department: event.target.value,
-                  }))
-                }
-              />
+              <div className={styles.fullWidth}>
+                <AffiliationPicker
+                  label="Affiliation"
+                  value={formValues.affiliationId}
+                  onChange={(affiliationId) =>
+                    setDraft((current) => ({
+                      ...(current ?? formValues),
+                      affiliationId,
+                    }))
+                  }
+                />
+                {!formValues.affiliationId && user.institution ? (
+                  <p className={styles.legacyHint}>
+                    You previously entered “
+                    {[user.department, user.institution]
+                      .filter(Boolean)
+                      .join(", ")}
+                    ”. Please select it from the list, or add it if it is
+                    missing.
+                  </p>
+                ) : null}
+              </div>
               <FormField
                 label="Position"
                 value={formValues.position}

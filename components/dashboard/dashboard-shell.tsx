@@ -95,6 +95,12 @@ function buildNavGroups(role: StaffRole | undefined): NavGroup[] {
       },
     );
   }
+  admin.push({
+    href: "/admin/affiliations",
+    label: "Affiliations",
+    icon: "bx-buildings",
+    isActive: startsWith("/admin/affiliations"),
+  });
   if (role === "staff" || role === "super_admin") {
     admin.push(
       {

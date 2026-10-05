@@ -1,0 +1,228 @@
+.picker {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.pickerLabel {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 0.35rem 0 0.45rem;
+  color: #171717;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid #d6d0c8;
+  border-radius: 0.55rem;
+  background: white;
+  padding: 0 0.75rem;
+  color: #6b6760;
+
+  &:focus-within {
+    outline: 2px solid color-mix(in srgb, var(--tu-red) 35%, white);
+    outline-offset: 1px;
+  }
+
+  // Doubled selector so page-level `.card input` rules cannot add a border.
+  .picker & input[role="combobox"] {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    padding: 0.8rem 0;
+    font: inherit;
+    color: #171717;
+    background: transparent;
+    text-overflow: ellipsis;
+  }
+
+  &.invalid {
+    border-color: #c6404f;
+    background: #fff8f8;
+  }
+}
+
+.controlOpen {
+  border-color: var(--orange);
+}
+
+.clear {
+  display: inline-flex;
+  border: 0;
+  background: transparent;
+  color: #6b6760;
+  font-size: 1.15rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1ece5;
+    color: #171717;
+  }
+}
+
+.pendingNote {
+  margin: 0.35rem 0 0;
+  color: #8a5a17;
+  font-size: 0.8rem;
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.3rem);
+  background: white;
+  border: 1px solid #ddd6cc;
+  border-radius: 0.6rem;
+  box-shadow: 0 1rem 2.25rem rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0.3rem;
+    max-height: 18rem;
+    overflow-y: auto;
+  }
+}
+
+.dropdownEmpty {
+  padding: 0.75rem;
+  color: #6b6760;
+  font-size: 0.9rem;
+}
+
+.option {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.45rem;
+  cursor: pointer;
+
+  strong {
+    font-size: 0.93rem;
+    font-weight: 600;
+    color: #171717;
+  }
+
+  span {
+    color: #6b6760;
+    font-size: 0.82rem;
+    font-weight: 400;
+  }
+
+  &[aria-selected="true"] strong {
+    color: var(--green);
+  }
+}
+
+.optionActive {
+  background: #f6f1ea;
+}
+
+.pendingBadge {
+  margin-left: 0.45rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: #fdf0dc;
+  color: #8a5a17 !important;
+  font-size: 0.7rem !important;
+  font-weight: 600;
+}
+
+.addOption {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid #eee8e0;
+  background: #fbf9f6;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--orange);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #f6f1ea;
+  }
+}
+
+.addPanel {
+  margin-top: 0.6rem;
+  padding: 1rem;
+  border: 1px dashed #d8cbb9;
+  border-radius: 0.65rem;
+  background: #fffcf7;
+}
+
+.addPanelTitle {
+  margin: 0 0 0.75rem;
+  font-weight: 700;
+}
+
+.addPanelActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem 0.85rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+
+  label {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #403d38;
+
+    em {
+      color: var(--tu-red);
+      font-style: normal;
+    }
+  }
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d6d0c8;
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    font-weight: 400;
+    background: white;
+
+    &:focus {
+      outline: 2px solid color-mix(in srgb, var(--orange) 35%, transparent);
+      border-color: var(--orange);
+    }
+  }
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.error {
+  margin: 0.6rem 0 0;
+  color: #a20e21;
+  font-size: 0.88rem;
+}

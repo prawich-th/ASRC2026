@@ -1,11 +1,8 @@
 import { v } from "convex/values";
-import {
-  buildDisplayName,
-  buildUserSearchText,
-  normalizeEmail,
-} from "../lib/userData";
+import { buildDisplayName, normalizeEmail } from "../lib/userData";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import { requireAffiliation, userAffiliationPatch } from "./lib/affiliation";
 import { getCurrentUser, getCurrentUserOrNull } from "./lib/auth";
 import {
   participantCategoryValidator,
@@ -49,9 +46,8 @@ export const completeProfile = mutation({
     suffix: v.optional(v.string()),
     specialty: v.optional(v.string()),
     phone: v.string(),
-    institution: v.string(),
+    affiliationId: v.id("affiliations"),
     position: v.optional(v.string()),
-    department: v.optional(v.string()),
     participantCategory: participantCategoryValidator,
     city: v.optional(v.string()),
   },
@@ -69,8 +65,10 @@ export const completeProfile = mutation({
       ? normalizeEmail(user.email)
       : undefined;
     const phone = args.phone.trim();
-    const institution = args.institution.trim();
-    const department = args.department?.trim() || undefined;
+    if (!args.firstName.trim() || !args.lastName.trim() || !phone) {
+      throw new Error("First name, last name, and phone number are required");
+    }
+    const affiliation = await requireAffiliation(ctx, args.affiliationId);
 
     await ctx.db.patch("users", user._id, {
       prefix: args.prefix,
@@ -80,20 +78,15 @@ export const completeProfile = mutation({
       suffix: args.suffix?.trim() || undefined,
       specialty: args.specialty?.trim() || undefined,
       phone,
-      institution,
       position: args.position?.trim() || undefined,
-      department,
       participantCategory: args.participantCategory,
       city: args.city?.trim() || undefined,
       name,
       normalizedEmail,
-      searchText: buildUserSearchText({
-        name,
-        email: normalizedEmail,
-        phone,
-        institution,
-        department,
-      }),
+      ...userAffiliationPatch(
+        { ...user, name, normalizedEmail, phone },
+        affiliation,
+      ),
       profileComplete: true,
     });
     return null;
@@ -107,9 +100,8 @@ export const updateProfile = mutation({
     otherName: v.optional(v.string()),
     lastName: v.string(),
     suffix: v.optional(v.string()),
-    institution: v.string(),
+    affiliationId: v.id("affiliations"),
     position: v.optional(v.string()),
-    department: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -124,8 +116,10 @@ export const updateProfile = mutation({
     const normalizedEmail = user.email
       ? normalizeEmail(user.email)
       : undefined;
-    const institution = args.institution.trim();
-    const department = args.department?.trim() || undefined;
+    if (!args.firstName.trim() || !args.lastName.trim()) {
+      throw new Error("First name and last name are required");
+    }
+    const affiliation = await requireAffiliation(ctx, args.affiliationId);
 
     await ctx.db.patch("users", user._id, {
       prefix: args.prefix,
@@ -133,18 +127,10 @@ export const updateProfile = mutation({
       otherName: args.otherName?.trim() || undefined,
       lastName: args.lastName.trim(),
       suffix: args.suffix?.trim() || undefined,
-      institution,
       position: args.position?.trim() || undefined,
-      department,
       name,
       normalizedEmail,
-      searchText: buildUserSearchText({
-        name,
-        email: normalizedEmail,
-        phone: user.phone,
-        institution,
-        department,
-      }),
+      ...userAffiliationPatch({ ...user, name, normalizedEmail }, affiliation),
     });
 
     return null;
