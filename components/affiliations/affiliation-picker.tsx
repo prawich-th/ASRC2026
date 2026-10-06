@@ -46,6 +46,7 @@ export default function AffiliationPicker({
   placeholder = "Search university, faculty, or department",
   known = [],
   invalid = false,
+  allowAdd = true,
 }: {
   value: Id<"affiliations"> | undefined;
   onChange: (affiliationId: Id<"affiliations"> | undefined) => void;
@@ -54,6 +55,8 @@ export default function AffiliationPicker({
   /** Affiliations already loaded by the caller (e.g. archived ones on a draft). */
   known?: ReadonlyArray<Doc<"affiliations">>;
   invalid?: boolean;
+  /** Offer "add a new affiliation" when nothing matches; off for filters. */
+  allowAdd?: boolean;
 }) {
   const baseId = useId();
   const inputId = `${baseId}-input`;
@@ -142,7 +145,9 @@ export default function AffiliationPicker({
     if (!open) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveIndex((index) => Math.min(index + 1, results.length));
+      setActiveIndex((index) =>
+        Math.min(index + 1, allowAdd ? results.length : results.length - 1),
+      );
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setActiveIndex((index) => Math.max(index - 1, 0));
@@ -151,7 +156,7 @@ export default function AffiliationPicker({
       const option = results[activeIndex];
       if (option) {
         choose(option);
-      } else {
+      } else if (allowAdd) {
         startAdding();
       }
     } else if (event.key === "Escape") {
@@ -256,19 +261,21 @@ export default function AffiliationPicker({
               ))
             )}
           </ul>
-          <button
-            type="button"
-            className={`${styles.addOption} ${
-              activeIndex === results.length ? styles.optionActive : ""
-            }`}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              startAdding();
-            }}
-          >
-            <i className="bx bx-plus-circle" aria-hidden="true" />
-            Can&apos;t find it? Add a new affiliation
-          </button>
+          {allowAdd ? (
+            <button
+              type="button"
+              className={`${styles.addOption} ${
+                activeIndex === results.length ? styles.optionActive : ""
+              }`}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                startAdding();
+              }}
+            >
+              <i className="bx bx-plus-circle" aria-hidden="true" />
+              Can&apos;t find it? Add a new affiliation
+            </button>
+          ) : null}
         </div>
       ) : null}
 

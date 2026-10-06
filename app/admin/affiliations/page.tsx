@@ -9,13 +9,20 @@ import AffiliationFields, {
 } from "@/components/affiliations/affiliation-fields";
 import AffiliationPicker from "@/components/affiliations/affiliation-picker";
 import Button from "@/components/form/button";
+import { FileUploadField } from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { AffiliationStatus, formatAffiliation } from "@/lib/affiliation";
+import {
+  AFFILIATION_IMPORT_TEMPLATE,
+  AffiliationImportError,
+  AffiliationImportRow,
+  parseAffiliationImport,
+} from "@/lib/affiliationImport";
 import { useMutation, useQuery } from "convex/react";
 import { FunctionReturnType } from "convex/server";
-import { useMemo, useState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 import local from "./affiliations.module.scss";
 
 type AdminRow = FunctionReturnType<typeof api.affiliations.listAdmin>[number];
@@ -253,6 +260,201 @@ function AffiliationRow({ row }: { row: AdminRow }) {
   );
 }
 
+const IMPORT_BATCH_SIZE = 200;
+
+function AffiliationImportPanel() {
+  const importBatch = useMutation(api.affiliations.importBatch);
+  const [file, setFile] = useState<File | null>(null);
+  const [rows, setRows] = useState<AffiliationImportRow[]>([]);
+  const [problems, setProblems] = useState<AffiliationImportError[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<{
+    added: number;
+    skipped: number;
+    failed: number;
+  } | null>(null);
+
+  async function selectFile(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.currentTarget.files?.[0] ?? null;
+    setFile(selected);
+    setRows([]);
+    setProblems([]);
+    setResult(null);
+    setError("");
+    if (!selected) {
+      return;
+    }
+    if (!selected.name.toLowerCase().endsWith(".csv")) {
+      setProblems([{ row: 1, message: "Please select a CSV file" }]);
+      return;
+    }
+    try {
+      const parsed = parseAffiliationImport(await selected.text());
+      setRows(parsed.rows);
+      setProblems(parsed.errors);
+    } catch (caught) {
+      setProblems([
+        { row: 1, message: errorMessage(caught, "Could not read the CSV") },
+      ]);
+    }
+  }
+
+  function downloadTemplate() {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(
+      new Blob([`\uFEFF${AFFILIATION_IMPORT_TEMPLATE}\n`], {
+        type: "text/csv;charset=utf-8",
+      }),
+    );
+    link.download = "asrc-affiliation-import-template.csv";
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  async function confirmImport() {
+    setImporting(true);
+    setError("");
+    setResult(null);
+    const totals = { added: 0, skipped: 0, failed: 0 };
+    const failures: AffiliationImportError[] = [];
+    try {
+      for (let start = 0; start < rows.length; start += IMPORT_BATCH_SIZE) {
+        const batch = rows.slice(start, start + IMPORT_BATCH_SIZE);
+        const outcome = await importBatch({
+          affiliations: batch.map((row) => row.affiliation),
+        });
+        totals.added += outcome.added;
+        totals.skipped += outcome.skipped;
+        totals.failed += outcome.errors.length;
+        failures.push(
+          ...outcome.errors.map((item) => ({
+            row: batch[item.index].row,
+            message: item.message,
+          })),
+        );
+      }
+      setResult(totals);
+      setRows([]);
+      setProblems(failures);
+    } catch (caught) {
+      setError(errorMessage(caught, "Could not import affiliations."));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <section className={styles.importPanel}>
+      <div className={styles.importHeader}>
+        <div>
+          <h2>Import from CSV</h2>
+          <p>
+            One affiliation per row with the columns{" "}
+            <code>department, faculty, university, district, province, country</code>
+            . University and country are required; entries already on the list
+            are skipped. Imported affiliations are verified straight away.
+          </p>
+        </div>
+        <Button type="button" onClick={downloadTemplate}>
+          Download CSV template
+        </Button>
+      </div>
+      <FileUploadField
+        label="CSV file"
+        accept=".csv,text/csv"
+        selectedFiles={file ? [file] : []}
+        contextText="Select one UTF-8 CSV file"
+        onChange={(event) => void selectFile(event)}
+      />
+      {problems.length > 0 ? (
+        <div className={styles.importErrors}>
+          <strong>
+            {result
+              ? "These rows could not be imported:"
+              : rows.length > 0
+                ? "These rows will be skipped:"
+                : "Fix these CSV issues before importing:"}
+          </strong>
+          <ul>
+            {problems.slice(0, 20).map((item) => (
+              <li key={`${item.row}-${item.message}`}>
+                Row {item.row}: {item.message}
+              </li>
+            ))}
+          </ul>
+          {problems.length > 20 ? (
+            <p>And {problems.length - 20} more.</p>
+          ) : null}
+        </div>
+      ) : null}
+      {rows.length > 0 ? (
+        <>
+          <p className={styles.importSummary}>
+            {rows.length} affiliation{rows.length === 1 ? "" : "s"} ready to
+            import.
+          </p>
+          <div className={styles.tableWrap}>
+            <table className={`${styles.table} ${styles.previewTable}`}>
+              <thead>
+                <tr>
+                  <th>Row</th>
+                  <th>University / Office</th>
+                  <th>Faculty</th>
+                  <th>Department</th>
+                  <th>Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 25).map(({ row, affiliation }) => (
+                  <tr key={row}>
+                    <td>{row}</td>
+                    <td>{affiliation.university}</td>
+                    <td>{affiliation.faculty ?? "—"}</td>
+                    <td>{affiliation.department ?? "—"}</td>
+                    <td>
+                      {[
+                        affiliation.district,
+                        affiliation.province,
+                        affiliation.country,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rows.length > 25 ? (
+            <p className={styles.importSummary}>Previewing the first 25 rows.</p>
+          ) : null}
+          <div className={styles.actions}>
+            <Button
+              className="green"
+              type="button"
+              disabled={importing}
+              onClick={() => void confirmImport()}
+            >
+              {importing
+                ? "Importing…"
+                : `Import ${rows.length} affiliation${rows.length === 1 ? "" : "s"}`}
+            </Button>
+          </div>
+        </>
+      ) : null}
+      {error ? <p className={styles.error}>{error}</p> : null}
+      {result ? (
+        <p className={styles.success}>
+          Import complete: {result.added} added, {result.skipped} already
+          listed
+          {result.failed ? `, ${result.failed} invalid` : ""}.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export default function AdminAffiliationsPage() {
   const counts = useQuery(api.affiliations.counts);
   const [tab, setTab] = useState<AffiliationStatus | null>(null);
@@ -260,9 +462,9 @@ export default function AdminAffiliationsPage() {
     tab ?? (counts && counts.pending > 0 ? "pending" : "verified");
   const rows = useQuery(api.affiliations.listAdmin, { status: activeTab });
   const create = useMutation(api.affiliations.create);
-  const importStarterList = useMutation(api.affiliations.importStarterList);
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [draft, setDraft] = useState<AffiliationDraft>(EMPTY_AFFILIATION);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -292,23 +494,6 @@ export default function AdminAffiliationsPage() {
     }
   }
 
-  async function handleImport() {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      const result = await importStarterList();
-      setNotice(
-        `Imported ${result.added} medical school${result.added === 1 ? "" : "s"}` +
-          (result.skipped ? ` (${result.skipped} already listed).` : "."),
-      );
-    } catch (caught) {
-      setError(errorMessage(caught, "Could not import the starter list."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className={styles.stack}>
       <section className={`${styles.card} ${styles.stack}`}>
@@ -323,10 +508,9 @@ export default function AdminAffiliationsPage() {
           <div className={styles.actions}>
             <Button
               type="button"
-              disabled={busy}
-              onClick={() => void handleImport()}
+              onClick={() => setShowImport((open) => !open)}
             >
-              Import Thai medical schools
+              {showImport ? "Close import" : "Import CSV"}
             </Button>
             <Button
               className="green"
@@ -341,6 +525,7 @@ export default function AdminAffiliationsPage() {
           </div>
         </div>
 
+        {showImport ? <AffiliationImportPanel /> : null}
         {adding ? (
           <div
             className={local.panel}

@@ -89,6 +89,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
                   phone: existing.phone,
                   institution: existing.institution,
                   department: existing.department,
+                  specialty: existing.specialty,
+                  position: existing.position,
+                  city: existing.city,
+                  participantCategory: existing.participantCategory,
                 }),
               }
             : {}),

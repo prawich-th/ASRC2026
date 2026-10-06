@@ -59,6 +59,83 @@
   }
 }
 
+.filterPanel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: end;
+
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+}
+
+.filterSearch {
+  grid-column: 1 / -1;
+}
+
+.filterPicker {
+  grid-column: span 2;
+  font-weight: 600;
+  font-size: 0.9rem;
+
+  @media (max-width: 760px) {
+    grid-column: 1 / -1;
+  }
+}
+
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--green) 9%, white);
+  color: var(--green);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem 0.25rem 0.75rem;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--green) 16%, white);
+  }
+}
+
+.filterClear {
+  border: none;
+  background: none;
+  color: #68635c;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.resultMeta {
+  margin: 0;
+  color: #68635c;
+  font-size: 0.9rem;
+}
+
+.cellMeta {
+  display: block;
+  margin-top: 0.2rem;
+  color: #6a655d;
+  font-size: 0.85rem;
+}
+
 .field,
 .textArea,
 .select {

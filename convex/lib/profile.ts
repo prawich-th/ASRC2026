@@ -74,3 +74,19 @@ export const userValidator = v.object({
   _creationTime: v.number(),
   ...userFields,
 });
+
+export const userListFiltersValidator = v.object({
+  search: v.optional(v.string()),
+  /** A staff role, or "none" for regular participants. */
+  role: v.optional(v.union(userRoleValidator, v.literal("none"))),
+  participantCategory: v.optional(participantCategoryValidator),
+  affiliationId: v.optional(v.id("affiliations")),
+  profile: v.optional(v.union(v.literal("complete"), v.literal("incomplete"))),
+  account: v.optional(
+    v.union(v.literal("registered"), v.literal("awaiting_signup")),
+  ),
+  notifications: v.optional(
+    v.union(v.literal("subscribed"), v.literal("unsubscribed")),
+  ),
+  order: v.optional(v.union(v.literal("newest"), v.literal("oldest"))),
+});

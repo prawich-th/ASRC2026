@@ -1,5 +1,9 @@
 import { v } from "convex/values";
-import { AFFILIATION_STATUSES, affiliationUnit } from "../../lib/affiliation";
+import {
+  AFFILIATION_STATUSES,
+  affiliationUnit,
+  formatAffiliation,
+} from "../../lib/affiliation";
 import { buildUserSearchText } from "../../lib/userData";
 import { Doc, Id } from "../_generated/dataModel";
 import { MutationCtx, QueryCtx } from "../_generated/server";
@@ -82,6 +86,11 @@ export function userAffiliationPatch(
       phone: user.phone,
       institution,
       department,
+      specialty: user.specialty,
+      position: user.position,
+      city: user.city,
+      participantCategory: user.participantCategory,
+      affiliation: formatAffiliation(affiliation),
     }),
   };
 }

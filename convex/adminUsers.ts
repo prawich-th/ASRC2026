@@ -4,6 +4,7 @@ import {
   paginationResultValidator,
 } from "convex/server";
 import { v } from "convex/values";
+import { formatAffiliation } from "../lib/affiliation";
 import { buildDisplayName, buildUserSearchText, normalizeEmail } from "../lib/userData";
 import { internal } from "./_generated/api";
 import { Doc } from "./_generated/dataModel";
@@ -13,9 +14,11 @@ import {
   query,
   QueryCtx,
 } from "./_generated/server";
+import { resolveAffiliation } from "./lib/affiliation";
 import { requireRole } from "./lib/auth";
 import {
   participantCategoryValidator,
+  userListFiltersValidator,
   prefixValidator,
   userRoleValidator,
   userValidator,
@@ -75,45 +78,85 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
 }
 
+/**
+ * Lists users for the admin directory. The most selective available index is
+ * used for each combination of filters; the rest are applied afterwards.
+ */
 export const list = query({
   args: {
     paginationOpts: paginationOptsValidator,
-    role: v.optional(userRoleValidator),
-    search: v.optional(v.string()),
+    ...userListFiltersValidator.fields,
   },
   returns: paginationResultValidator(userValidator),
   handler: async (ctx, args) => {
     await requireRole(ctx, ["super_admin"]);
+    const { role, participantCategory, affiliationId } = args;
     const search = args.search?.trim();
-    if (search) {
-      if (args.role !== undefined) {
-        const result = await ctx.db
-          .query("users")
-          .withSearchIndex("search_users", (q) =>
-            q.search("searchText", search).eq("role", args.role),
-          )
-          .paginate(args.paginationOpts);
-        return await addProfileImages(ctx, result);
-      }
-      const result = await ctx.db
-        .query("users")
-        .withSearchIndex("search_users", (q) =>
-          q.search("searchText", search),
-        )
-        .paginate(args.paginationOpts);
-      return await addProfileImages(ctx, result);
-    }
-    if (args.role !== undefined) {
-      const result = await ctx.db
-        .query("users")
-        .withIndex("by_role", (q) => q.eq("role", args.role))
-        .order("asc")
-        .paginate(args.paginationOpts);
-      return await addProfileImages(ctx, result);
-    }
-    const result = await ctx.db
-      .query("users")
-      .order("asc")
+    const roleValue = role === "none" ? undefined : role;
+
+    const users = ctx.db.query("users");
+    const indexed = search
+      ? users.withSearchIndex("search_users", (q) => {
+          let query = q.search("searchText", search);
+          if (roleValue !== undefined) query = query.eq("role", roleValue);
+          if (participantCategory !== undefined) {
+            query = query.eq("participantCategory", participantCategory);
+          }
+          if (affiliationId !== undefined) {
+            query = query.eq("affiliationId", affiliationId);
+          }
+          return query;
+        })
+      : affiliationId !== undefined
+        ? users
+            .withIndex("by_affiliationId", (q) =>
+              q.eq("affiliationId", affiliationId),
+            )
+            .order(args.order === "oldest" ? "asc" : "desc")
+        : role !== undefined
+          ? users
+              .withIndex("by_role", (q) => q.eq("role", roleValue))
+              .order(args.order === "oldest" ? "asc" : "desc")
+          : participantCategory !== undefined
+            ? users
+                .withIndex("by_participantCategory", (q) =>
+                  q.eq("participantCategory", participantCategory),
+                )
+                .order(args.order === "oldest" ? "asc" : "desc")
+            : users.order(args.order === "oldest" ? "asc" : "desc");
+
+    const result = await indexed
+      .filter((q) =>
+        q.and(
+          // Predicates the chosen index could not express. Repeating one the
+          // index already applied is harmless.
+          role === undefined ? true : q.eq(q.field("role"), roleValue),
+          participantCategory === undefined
+            ? true
+            : q.eq(q.field("participantCategory"), participantCategory),
+          args.profile === undefined
+            ? true
+            : args.profile === "complete"
+              ? q.eq(q.field("profileComplete"), true)
+              : q.neq(q.field("profileComplete"), true),
+          args.account === undefined
+            ? true
+            : args.account === "awaiting_signup"
+              ? q.and(
+                  q.neq(q.field("preRegisteredAt"), undefined),
+                  q.eq(q.field("claimedAt"), undefined),
+                )
+              : q.or(
+                  q.eq(q.field("preRegisteredAt"), undefined),
+                  q.neq(q.field("claimedAt"), undefined),
+                ),
+          args.notifications === undefined
+            ? true
+            : args.notifications === "subscribed"
+              ? q.eq(q.field("wantsNotifications"), true)
+              : q.neq(q.field("wantsNotifications"), true),
+        ),
+      )
       .paginate(args.paginationOpts);
     return await addProfileImages(ctx, result);
   },
@@ -224,6 +267,10 @@ export const importPreRegistered = mutation({
           phone,
           institution,
           department: row.department,
+          specialty: row.specialty,
+          position: row.position,
+          city: row.city,
+          participantCategory: row.participantCategory,
         }),
       };
       const existing = matches[0];
@@ -284,6 +331,9 @@ export const backfillUserSearchFields = internalMutation({
       numItems: 100,
     });
     for (const user of page.page) {
+      const affiliation = user.affiliationId
+        ? await resolveAffiliation(ctx, user.affiliationId)
+        : null;
       const normalizedEmail = user.email
         ? normalizeEmail(user.email)
         : undefined;
@@ -295,6 +345,11 @@ export const backfillUserSearchFields = internalMutation({
           phone: user.phone,
           institution: user.institution,
           department: user.department,
+          specialty: user.specialty,
+          position: user.position,
+          city: user.city,
+          participantCategory: user.participantCategory,
+          affiliation: affiliation ? formatAffiliation(affiliation) : undefined,
         }),
         claimedAt:
           user.claimedAt ??

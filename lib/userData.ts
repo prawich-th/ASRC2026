@@ -4,6 +4,12 @@ export type SearchableUser = {
   phone?: string;
   institution?: string;
   department?: string;
+  specialty?: string;
+  position?: string;
+  city?: string;
+  participantCategory?: string;
+  /** Full formatted affiliation, so faculty, province, or country match too. */
+  affiliation?: string;
 };
 
 export function normalizeEmail(email: string): string {
@@ -26,6 +32,11 @@ export function buildUserSearchText(user: SearchableUser): string {
     user.phone,
     user.institution,
     user.department,
+    user.specialty,
+    user.position,
+    user.city,
+    user.participantCategory,
+    user.affiliation,
   ]
     .map((value) => value?.trim().toLowerCase())
     .filter((value): value is string => Boolean(value))

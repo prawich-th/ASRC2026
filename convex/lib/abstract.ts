@@ -70,6 +70,11 @@ export const abstractFields = {
   submitterFeedback: v.optional(v.string()),
   reviewedBy: v.optional(v.id("users")),
   reviewedAt: v.optional(v.number()),
+  /**
+   * Denormalized title, code, keywords, authors, affiliations, and submitter
+   * details for the staff search index.
+   */
+  searchText: v.optional(v.string()),
 };
 
 export const abstractValidator = v.object({
@@ -161,6 +166,8 @@ export const adminAbstractSummaryValidator = v.object({
     _creationTime: v.number(),
     code: v.string(),
     title: v.string(),
+    keywords: v.array(v.string()),
+    authorNames: v.array(v.string()),
     category: v.optional(abstractCategoryValidator),
     status: abstractStatusValidator,
     submittedAt: v.optional(v.number()),
@@ -175,4 +182,23 @@ export const adminAbstractDetailValidator = v.object({
   owner: abstractOwnerValidator,
   affiliations: v.array(affiliationValidator),
   files: v.array(abstractFileWithUrlValidator),
+});
+
+export const abstractListFiltersValidator = v.object({
+  search: v.optional(v.string()),
+  status: v.optional(
+    v.union(
+      v.literal("submitted"),
+      v.literal("revision_requested"),
+      v.literal("selected"),
+      v.literal("rejected"),
+    ),
+  ),
+  /** A presentation category, or "none" for abstracts without one yet. */
+  category: v.optional(v.union(abstractCategoryValidator, v.literal("none"))),
+  /** Inclusive lower and exclusive upper bounds on `submittedAt`. */
+  submittedFrom: v.optional(v.number()),
+  submittedTo: v.optional(v.number()),
+  reviewed: v.optional(v.union(v.literal("reviewed"), v.literal("unreviewed"))),
+  order: v.optional(v.union(v.literal("newest"), v.literal("oldest"))),
 });

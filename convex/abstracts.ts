@@ -1,5 +1,4 @@
 import {
-  PaginationResult,
   paginationOptsValidator,
   paginationResultValidator,
 } from "convex/server";
@@ -11,6 +10,7 @@ import {
   MAX_ABSTRACT_TITLE_LENGTH,
   normalizeKeywords,
 } from "../lib/abstractForm";
+import { formatAffiliation } from "../lib/affiliation";
 import {
   ABSTRACT_DRAFT_WORD_CEILING,
   ABSTRACT_WORD_LIMIT,
@@ -32,6 +32,7 @@ import {
   abstractAuthorValidator,
   abstractCategoryValidator,
   abstractDetailValidator,
+  abstractListFiltersValidator,
   abstractSummaryValidator,
   abstractValidator,
   adminAbstractDetailValidator,
@@ -81,6 +82,46 @@ async function ensureAbstractCode(
   const code = await allocateAbstractCode(ctx);
   await ctx.db.patch("abstracts", abstract._id, { code });
   return code;
+}
+
+/** Rebuilds the denormalized text the staff search index matches against. */
+async function refreshSearchText(
+  ctx: MutationCtx,
+  abstractId: Id<"abstracts">,
+) {
+  const abstract = await ctx.db.get("abstracts", abstractId);
+  if (!abstract) {
+    return;
+  }
+  const owner = await ctx.db.get("users", abstract.ownerId);
+  const affiliationIds = new Set(
+    [
+      ...(abstract.authorList ?? []).map((author) => author.affiliationId),
+      abstract.advisorAffiliationId,
+    ].filter((id): id is Id<"affiliations"> => id !== undefined),
+  );
+  const affiliations = await Promise.all(
+    [...affiliationIds].map((id) => resolveAffiliation(ctx, id)),
+  );
+  const searchText = [
+    abstract.code,
+    abstract.title,
+    ...abstract.keywords,
+    ...(abstract.authorList ?? []).map((author) => author.name),
+    abstract.advisor,
+    abstract.authors,
+    abstract.affiliation,
+    ...affiliations.map((affiliation) => formatAffiliation(affiliation)),
+    owner?.name,
+    owner?.email,
+    owner?.institution,
+  ]
+    .map((value) => value?.replace(/\s+/g, " ").trim())
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+  if (searchText !== abstract.searchText) {
+    await ctx.db.patch("abstracts", abstract._id, { searchText });
+  }
 }
 
 function toOwnerAbstract(abstract: Doc<"abstracts">) {
@@ -333,6 +374,7 @@ export const createDraft = mutation({
       status: "draft",
       updatedAt: Date.now(),
     });
+    await refreshSearchText(ctx, abstractId);
 
     const abstract = await ctx.db.get("abstracts", abstractId);
     if (!abstract) {
@@ -357,6 +399,7 @@ export const updateDraft = mutation({
       ...(await normalizeDraft(ctx, args)),
       updatedAt: Date.now(),
     });
+    await refreshSearchText(ctx, abstract._id);
 
     const updatedAbstract = await ctx.db.get("abstracts", abstract._id);
     if (!updatedAbstract) {
@@ -428,6 +471,8 @@ export const submitDraft = mutation({
       submittedAt: now,
       updatedAt: now,
     });
+    // The submitter's profile may have changed since the draft was saved.
+    await refreshSearchText(ctx, abstract._id);
 
     const submittedAbstract = await ctx.db.get("abstracts", abstract._id);
     if (!submittedAbstract) {
@@ -448,83 +493,93 @@ export const submitDraft = mutation({
   },
 });
 
-const reviewStatusValidator = v.union(
-  v.literal("submitted"),
-  v.literal("revision_requested"),
-  v.literal("selected"),
-  v.literal("rejected"),
-);
-
 export const listForReview = query({
   args: {
     paginationOpts: paginationOptsValidator,
-    status: v.optional(reviewStatusValidator),
-    category: v.optional(abstractCategoryValidator),
-    search: v.optional(v.string()),
+    ...abstractListFiltersValidator.fields,
   },
   returns: paginationResultValidator(adminAbstractSummaryValidator),
   handler: async (ctx, args) => {
     await requireRole(ctx, ["academic_staff"]);
-    const { status, category } = args;
+    const { status, submittedFrom: from, submittedTo: to } = args;
+    const category = args.category === "none" ? undefined : args.category;
+    const hasCategory = args.category !== undefined;
+    const order = args.order === "oldest" ? "asc" : "desc";
     const search = args.search?.trim();
 
-    let result: PaginationResult<Doc<"abstracts">>;
-    if (search && isAbstractCode(search)) {
-      result = await ctx.db
-        .query("abstracts")
-        .withIndex("by_code", (q) => q.eq("code", search))
-        .filter((q) =>
-          q.and(
-            q.neq(q.field("status"), "draft"),
-            status === undefined ? true : q.eq(q.field("status"), status),
-            category === undefined ? true : q.eq(q.field("category"), category),
-          ),
-        )
-        .paginate(args.paginationOpts);
-    } else if (search) {
-      result = await ctx.db
-        .query("abstracts")
-        .withSearchIndex("search_title", (q) => {
-          const byTitle = q.search("title", search);
-          if (status !== undefined && category !== undefined) {
-            return byTitle.eq("status", status).eq("category", category);
-          }
-          if (status !== undefined) {
-            return byTitle.eq("status", status);
-          }
-          if (category !== undefined) {
-            return byTitle.eq("category", category);
-          }
-          return byTitle;
-        })
-        .filter((q) => q.neq(q.field("status"), "draft"))
-        .paginate(args.paginationOpts);
-    } else if (category !== undefined) {
-      result = await ctx.db
-        .query("abstracts")
-        .withIndex("by_category_and_submittedAt", (q) =>
-          q.eq("category", category),
-        )
-        .order("desc")
-        .filter((q) =>
-          status === undefined
-            ? q.neq(q.field("status"), "draft")
-            : q.eq(q.field("status"), status),
-        )
-        .paginate(args.paginationOpts);
-    } else if (status !== undefined) {
-      result = await ctx.db
-        .query("abstracts")
-        .withIndex("by_status_and_submittedAt", (q) => q.eq("status", status))
-        .order("desc")
-        .paginate(args.paginationOpts);
-    } else {
-      result = await ctx.db
-        .query("abstracts")
-        .withIndex("by_status_and_submittedAt", (q) => q.gt("status", "draft"))
-        .order("desc")
-        .paginate(args.paginationOpts);
-    }
+    const abstracts = ctx.db.query("abstracts");
+    const indexed =
+      search && isAbstractCode(search)
+        ? abstracts.withIndex("by_code", (q) => q.eq("code", search))
+        : search
+          ? abstracts.withSearchIndex("search_text", (q) => {
+              let query = q.search("searchText", search);
+              if (status !== undefined) query = query.eq("status", status);
+              if (category !== undefined) {
+                query = query.eq("category", category);
+              }
+              return query;
+            })
+          : status !== undefined
+            ? abstracts
+                .withIndex("by_status_and_submittedAt", (q) => {
+                  const byStatus = q.eq("status", status);
+                  if (from === undefined) {
+                    return to === undefined
+                      ? byStatus
+                      : byStatus.lt("submittedAt", to);
+                  }
+                  const lower = byStatus.gte("submittedAt", from);
+                  return to === undefined
+                    ? lower
+                    : lower.lt("submittedAt", to);
+                })
+                .order(order)
+            : hasCategory
+              ? abstracts
+                  .withIndex("by_category_and_submittedAt", (q) => {
+                    const byCategory = q.eq("category", category);
+                    if (from === undefined) {
+                      return to === undefined
+                        ? byCategory
+                        : byCategory.lt("submittedAt", to);
+                    }
+                    const lower = byCategory.gte("submittedAt", from);
+                    return to === undefined
+                      ? lower
+                      : lower.lt("submittedAt", to);
+                  })
+                  .order(order)
+              : abstracts
+                  .withIndex("by_submittedAt", (q) => {
+                    if (from === undefined) {
+                      return to === undefined ? q : q.lt("submittedAt", to);
+                    }
+                    const lower = q.gte("submittedAt", from);
+                    return to === undefined
+                      ? lower
+                      : lower.lt("submittedAt", to);
+                  })
+                  .order(order);
+
+    const result = await indexed
+      .filter((q) =>
+        q.and(
+          // Predicates the chosen index could not express. Repeating one the
+          // index already applied is harmless.
+          q.neq(q.field("status"), "draft"),
+          status === undefined ? true : q.eq(q.field("status"), status),
+          hasCategory ? q.eq(q.field("category"), category) : true,
+          from === undefined ? true : q.gte(q.field("submittedAt"), from),
+          to === undefined ? true : q.lt(q.field("submittedAt"), to),
+          args.reviewed === undefined
+            ? true
+            : args.reviewed === "reviewed"
+              ? q.neq(q.field("reviewedAt"), undefined)
+              : q.eq(q.field("reviewedAt"), undefined),
+        ),
+      )
+      .paginate(args.paginationOpts);
 
     const page = await Promise.all(
       result.page.map(async (abstract) => {
@@ -538,6 +593,10 @@ export const listForReview = query({
             _creationTime: abstract._creationTime,
             code: abstract.code ?? "",
             title: abstract.title,
+            keywords: abstract.keywords,
+            authorNames: (abstract.authorList ?? [])
+              .map((author) => author.name)
+              .filter(Boolean),
             category: abstract.category,
             status: abstract.status,
             submittedAt: abstract.submittedAt,
@@ -665,6 +724,30 @@ export const backfillAbstractCodes = internalMutation({
       await ctx.scheduler.runAfter(0, internal.abstracts.backfillAbstractCodes, {
         cursor: page.continueCursor,
       });
+    }
+    return null;
+  },
+});
+
+/** Fills `searchText` for abstracts saved before it existed, or after
+ * affiliation or profile edits made it stale. */
+export const backfillAbstractSearchText = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("abstracts").paginate({
+      cursor: args.cursor,
+      numItems: 100,
+    });
+    for (const abstract of page.page) {
+      await refreshSearchText(ctx, abstract._id);
+    }
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.abstracts.backfillAbstractSearchText,
+        { cursor: page.continueCursor },
+      );
     }
     return null;
   },

@@ -84,7 +84,16 @@ export const completeProfile = mutation({
       name,
       normalizedEmail,
       ...userAffiliationPatch(
-        { ...user, name, normalizedEmail, phone },
+        {
+          ...user,
+          name,
+          normalizedEmail,
+          phone,
+          specialty: args.specialty?.trim() || undefined,
+          position: args.position?.trim() || undefined,
+          city: args.city?.trim() || undefined,
+          participantCategory: args.participantCategory,
+        },
         affiliation,
       ),
       profileComplete: true,
@@ -130,7 +139,15 @@ export const updateProfile = mutation({
       position: args.position?.trim() || undefined,
       name,
       normalizedEmail,
-      ...userAffiliationPatch({ ...user, name, normalizedEmail }, affiliation),
+      ...userAffiliationPatch(
+        {
+          ...user,
+          name,
+          normalizedEmail,
+          position: args.position?.trim() || undefined,
+        },
+        affiliation,
+      ),
     });
 
     return null;
