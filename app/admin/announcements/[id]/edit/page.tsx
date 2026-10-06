@@ -12,6 +12,7 @@ import {
   announcementTagsToInput,
   parseAnnouncementTags,
 } from "@/lib/announcementDisplay";
+import { markdownToRichDocument } from "@/lib/richDocument";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -37,7 +38,7 @@ export default function EditAnnouncementPage() {
         title: value.title,
         slug: value.slug,
         summary: value.summary,
-        body: value.body,
+        bodyRich: value.bodyRich,
         tags: parseAnnouncementTags(value.tagNames),
         authorName: value.authorName,
         authorTitle: value.authorTitle,
@@ -98,7 +99,8 @@ export default function EditAnnouncementPage() {
           title: announcement.title,
           slug: announcement.slug,
           summary: announcement.summary,
-          body: announcement.body,
+          bodyRich:
+            announcement.bodyRich ?? markdownToRichDocument(announcement.body),
           tagNames: announcementTagsToInput(announcement.tags),
           authorName: announcement.authorName ?? "",
           authorTitle: announcement.authorTitle ?? "",

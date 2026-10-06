@@ -6,7 +6,7 @@ import {
   sanitizeRichTextOps,
 } from "@/lib/richText";
 import "quill/dist/quill.snow.css";
-import { useEffect, useRef } from "react";
+import { CSSProperties, useEffect, useRef } from "react";
 import styles from "./abstract-editor.module.scss";
 
 const TOOLBAR = [
@@ -16,26 +16,37 @@ const TOOLBAR = [
 ];
 
 /**
- * Quill editor limited to inline formatting. The initial value is read once
- * on mount; afterwards the editor owns its content and reports changes.
+ * Quill editor, by default limited to the abstract's inline formatting. The
+ * initial value is read once on mount; afterwards the editor owns its content
+ * and reports changes. Pass `toolbar`, `formats`, and `sanitize` together to
+ * allow other formats.
  */
-export default function RichTextEditor({
+export default function RichTextEditor<Op = RichTextOp>({
   initialValue,
   onChange,
   placeholder,
   labelledBy,
   invalid = false,
+  toolbar = TOOLBAR,
+  formats = RICH_TEXT_FORMATS,
+  sanitize = sanitizeRichTextOps as unknown as (ops: unknown[]) => Op[],
+  minHeight,
 }: {
-  initialValue: ReadonlyArray<RichTextOp>;
-  onChange: (ops: RichTextOp[], plainText: string) => void;
+  initialValue: ReadonlyArray<Op>;
+  onChange: (ops: Op[], plainText: string) => void;
   placeholder?: string;
   labelledBy?: string;
   invalid?: boolean;
+  toolbar?: unknown[];
+  formats?: ReadonlyArray<string>;
+  sanitize?: (ops: unknown[]) => Op[];
+  /** CSS length for the editing area, e.g. "24rem". */
+  minHeight?: string;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
   const initialValueRef = useRef(initialValue);
-  const placeholderRef = useRef(placeholder);
+  const optionsRef = useRef({ placeholder, toolbar, formats, sanitize });
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -52,11 +63,14 @@ export default function RichTextEditor({
       if (cancelled) return;
       const quill = new Quill(editorElement, {
         theme: "snow",
-        placeholder: placeholderRef.current,
-        formats: [...RICH_TEXT_FORMATS],
-        modules: { toolbar: TOOLBAR },
+        placeholder: optionsRef.current.placeholder,
+        formats: [...optionsRef.current.formats],
+        modules: { toolbar: optionsRef.current.toolbar },
       });
-      quill.setContents([...initialValueRef.current], "silent");
+      quill.setContents(
+        [...initialValueRef.current] as Parameters<typeof quill.setContents>[0],
+        "silent",
+      );
       quill.root.setAttribute("role", "textbox");
       quill.root.setAttribute("aria-multiline", "true");
       if (labelledBy) {
@@ -64,7 +78,7 @@ export default function RichTextEditor({
       }
       quill.on("text-change", () => {
         onChangeRef.current(
-          sanitizeRichTextOps(quill.getContents().ops),
+          optionsRef.current.sanitize(quill.getContents().ops),
           quill.getText(),
         );
       });
@@ -81,6 +95,11 @@ export default function RichTextEditor({
     <div
       ref={hostRef}
       className={`${styles.quillHost} ${invalid ? styles.quillInvalid : ""}`}
+      style={
+        minHeight
+          ? ({ "--quill-min-height": minHeight } as CSSProperties)
+          : undefined
+      }
     />
   );
 }

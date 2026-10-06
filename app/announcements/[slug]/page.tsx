@@ -3,6 +3,7 @@
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
+import RichDocumentView from "@/components/rich-document/rich-document-view";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 import Link from "next/link";
@@ -61,9 +62,13 @@ export default function AnnouncementDetailPage() {
                   <span key={`${tag.name}-${tag.tone}`}>{tag.name}</span>
                 ))}
               </div>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {announcement.body}
-              </ReactMarkdown>
+              {announcement.bodyRich ? (
+                <RichDocumentView ops={announcement.bodyRich} />
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {announcement.body}
+                </ReactMarkdown>
+              )}
               {announcement.authorName ||
               announcement.authorTitle ||
               announcement.departmentName ||

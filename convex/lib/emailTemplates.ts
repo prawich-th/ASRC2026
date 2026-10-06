@@ -1,3 +1,8 @@
+import {
+  RichDocumentOp,
+  richDocumentToEmailHtml,
+} from "../../lib/richDocument";
+
 type EmailContent = {
   subject: string;
   html: string;
@@ -207,9 +212,14 @@ export function announcementEmail(args: {
   title: string;
   summary: string;
   body: string;
+  /** Formatted body; when absent, `body` is legacy Markdown. */
+  bodyRich?: ReadonlyArray<RichDocumentOp>;
   url: string;
 }): EmailContent {
   const subject = `ASRC 2027 announcement: ${args.title}`;
+  const bodyHtml = args.bodyRich
+    ? richDocumentToEmailHtml(args.bodyRich)
+    : markdownToEmailHtml(args.body);
   return {
     subject,
     html: brandedEmail({
@@ -217,7 +227,7 @@ export function announcementEmail(args: {
       label: "Conference announcement",
       heading: args.title,
       intro: args.summary,
-      bodyHtml: `<div style="margin-top:26px;padding-top:24px;border-top:1px solid #eee7dd;">${markdownToEmailHtml(args.body)}</div>`,
+      bodyHtml: `<div style="margin-top:26px;padding-top:24px;border-top:1px solid #eee7dd;">${bodyHtml}</div>`,
       actionLabel: "Read announcement",
       actionUrl: args.url,
       footer:

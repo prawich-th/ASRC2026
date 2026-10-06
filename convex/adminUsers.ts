@@ -4,6 +4,7 @@ import {
   paginationResultValidator,
 } from "convex/server";
 import { v } from "convex/values";
+import { formatAffiliation } from "../lib/affiliation";
 import { buildDisplayName, buildUserSearchText, normalizeEmail } from "../lib/userData";
 import { internal } from "./_generated/api";
 import { Doc } from "./_generated/dataModel";
@@ -13,9 +14,12 @@ import {
   query,
   QueryCtx,
 } from "./_generated/server";
+import { resolveAffiliation } from "./lib/affiliation";
 import { requireRole } from "./lib/auth";
+import { buildProfilePatch, profileInputValidator } from "./lib/profileInput";
 import {
   participantCategoryValidator,
+  userListFiltersValidator,
   prefixValidator,
   userRoleValidator,
   userValidator,
@@ -75,45 +79,85 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
 }
 
+/**
+ * Lists users for the admin directory. The most selective available index is
+ * used for each combination of filters; the rest are applied afterwards.
+ */
 export const list = query({
   args: {
     paginationOpts: paginationOptsValidator,
-    role: v.optional(userRoleValidator),
-    search: v.optional(v.string()),
+    ...userListFiltersValidator.fields,
   },
   returns: paginationResultValidator(userValidator),
   handler: async (ctx, args) => {
     await requireRole(ctx, ["super_admin"]);
+    const { role, participantCategory, affiliationId } = args;
     const search = args.search?.trim();
-    if (search) {
-      if (args.role !== undefined) {
-        const result = await ctx.db
-          .query("users")
-          .withSearchIndex("search_users", (q) =>
-            q.search("searchText", search).eq("role", args.role),
-          )
-          .paginate(args.paginationOpts);
-        return await addProfileImages(ctx, result);
-      }
-      const result = await ctx.db
-        .query("users")
-        .withSearchIndex("search_users", (q) =>
-          q.search("searchText", search),
-        )
-        .paginate(args.paginationOpts);
-      return await addProfileImages(ctx, result);
-    }
-    if (args.role !== undefined) {
-      const result = await ctx.db
-        .query("users")
-        .withIndex("by_role", (q) => q.eq("role", args.role))
-        .order("asc")
-        .paginate(args.paginationOpts);
-      return await addProfileImages(ctx, result);
-    }
-    const result = await ctx.db
-      .query("users")
-      .order("asc")
+    const roleValue = role === "none" ? undefined : role;
+
+    const users = ctx.db.query("users");
+    const indexed = search
+      ? users.withSearchIndex("search_users", (q) => {
+          let query = q.search("searchText", search);
+          if (roleValue !== undefined) query = query.eq("role", roleValue);
+          if (participantCategory !== undefined) {
+            query = query.eq("participantCategory", participantCategory);
+          }
+          if (affiliationId !== undefined) {
+            query = query.eq("affiliationId", affiliationId);
+          }
+          return query;
+        })
+      : affiliationId !== undefined
+        ? users
+            .withIndex("by_affiliationId", (q) =>
+              q.eq("affiliationId", affiliationId),
+            )
+            .order(args.order === "oldest" ? "asc" : "desc")
+        : role !== undefined
+          ? users
+              .withIndex("by_role", (q) => q.eq("role", roleValue))
+              .order(args.order === "oldest" ? "asc" : "desc")
+          : participantCategory !== undefined
+            ? users
+                .withIndex("by_participantCategory", (q) =>
+                  q.eq("participantCategory", participantCategory),
+                )
+                .order(args.order === "oldest" ? "asc" : "desc")
+            : users.order(args.order === "oldest" ? "asc" : "desc");
+
+    const result = await indexed
+      .filter((q) =>
+        q.and(
+          // Predicates the chosen index could not express. Repeating one the
+          // index already applied is harmless.
+          role === undefined ? true : q.eq(q.field("role"), roleValue),
+          participantCategory === undefined
+            ? true
+            : q.eq(q.field("participantCategory"), participantCategory),
+          args.profile === undefined
+            ? true
+            : args.profile === "complete"
+              ? q.eq(q.field("profileComplete"), true)
+              : q.neq(q.field("profileComplete"), true),
+          args.account === undefined
+            ? true
+            : args.account === "awaiting_signup"
+              ? q.and(
+                  q.neq(q.field("preRegisteredAt"), undefined),
+                  q.eq(q.field("claimedAt"), undefined),
+                )
+              : q.or(
+                  q.eq(q.field("preRegisteredAt"), undefined),
+                  q.neq(q.field("claimedAt"), undefined),
+                ),
+          args.notifications === undefined
+            ? true
+            : args.notifications === "subscribed"
+              ? q.eq(q.field("wantsNotifications"), true)
+              : q.neq(q.field("wantsNotifications"), true),
+        ),
+      )
       .paginate(args.paginationOpts);
     return await addProfileImages(ctx, result);
   },
@@ -224,6 +268,10 @@ export const importPreRegistered = mutation({
           phone,
           institution,
           department: row.department,
+          specialty: row.specialty,
+          position: row.position,
+          city: row.city,
+          participantCategory: row.participantCategory,
         }),
       };
       const existing = matches[0];
@@ -284,6 +332,9 @@ export const backfillUserSearchFields = internalMutation({
       numItems: 100,
     });
     for (const user of page.page) {
+      const affiliation = user.affiliationId
+        ? await resolveAffiliation(ctx, user.affiliationId)
+        : null;
       const normalizedEmail = user.email
         ? normalizeEmail(user.email)
         : undefined;
@@ -295,6 +346,11 @@ export const backfillUserSearchFields = internalMutation({
           phone: user.phone,
           institution: user.institution,
           department: user.department,
+          specialty: user.specialty,
+          position: user.position,
+          city: user.city,
+          participantCategory: user.participantCategory,
+          affiliation: affiliation ? formatAffiliation(affiliation) : undefined,
         }),
         claimedAt:
           user.claimedAt ??
@@ -369,5 +425,101 @@ export const removeRole = mutation({
       throw new Error("Could not remove user role");
     }
     return updated;
+  },
+});
+
+/** Lets super admins correct any participant's profile. */
+export const updateProfile = mutation({
+  args: {
+    userId: v.id("users"),
+    profile: profileInputValidator,
+    wantsNotifications: v.optional(v.boolean()),
+  },
+  returns: userValidator,
+  handler: async (ctx, args) => {
+    await requireRole(ctx, ["super_admin"]);
+    const target = await ctx.db.get("users", args.userId);
+    if (!target) {
+      throw new Error("User not found");
+    }
+    await ctx.db.patch("users", target._id, {
+      ...(await buildProfilePatch(ctx, target, args.profile)),
+      ...(args.wantsNotifications !== undefined
+        ? { wantsNotifications: args.wantsNotifications }
+        : {}),
+    });
+    const updated = await ctx.db.get("users", target._id);
+    if (!updated) {
+      throw new Error("Could not update user");
+    }
+    return updated;
+  },
+});
+
+function describeValue(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+/**
+ * Dry run of profile creation: applies the same validation and derivation as
+ * registration to the given user (the caller by default) without saving, and
+ * reports either the error a participant would see or every field that would
+ * change.
+ */
+export const previewProfile = query({
+  args: {
+    userId: v.optional(v.id("users")),
+    profile: profileInputValidator,
+  },
+  returns: v.object({
+    error: v.optional(v.string()),
+    changes: v.array(
+      v.object({
+        field: v.string(),
+        before: v.optional(v.string()),
+        after: v.optional(v.string()),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const admin = await requireRole(ctx, ["super_admin"]);
+    const target = args.userId ? await ctx.db.get("users", args.userId) : admin;
+    if (!target) {
+      throw new Error("User not found");
+    }
+    let patch: Record<string, unknown>;
+    try {
+      patch = await buildProfilePatch(ctx, target, args.profile);
+    } catch (caught) {
+      return {
+        error: caught instanceof Error ? caught.message : String(caught),
+        changes: [],
+      };
+    }
+    const current = target as Record<string, unknown>;
+    return {
+      changes: Object.keys(patch)
+        .sort()
+        .map((field) => ({
+          field,
+          before: describeValue(current[field]),
+          after: describeValue(patch[field]),
+        })),
+    };
+  },
+});
+
+/**
+ * Marks the caller's own profile incomplete so they can walk through the
+ * real registration step again. Existing values are kept.
+ */
+export const restartOwnRegistration = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const admin = await requireRole(ctx, ["super_admin"]);
+    await ctx.db.patch("users", admin._id, { profileComplete: false });
+    return null;
   },
 });

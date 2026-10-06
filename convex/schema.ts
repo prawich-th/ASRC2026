@@ -16,9 +16,10 @@ export default defineSchema({
     .index("by_role", ["role"])
     .index("by_wantsNotifications", ["wantsNotifications"])
     .index("by_affiliationId", ["affiliationId"])
+    .index("by_participantCategory", ["participantCategory"])
     .searchIndex("search_users", {
       searchField: "searchText",
-      filterFields: ["role"],
+      filterFields: ["role", "participantCategory", "affiliationId"],
     }),
   affiliations: defineTable(affiliationFields)
     .index("by_status_and_university", ["status", "university"])
@@ -30,8 +31,9 @@ export default defineSchema({
     .index("by_status_and_submittedAt", ["status", "submittedAt"])
     .index("by_code", ["code"])
     .index("by_category_and_submittedAt", ["category", "submittedAt"])
-    .searchIndex("search_title", {
-      searchField: "title",
+    .index("by_submittedAt", ["submittedAt"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
       filterFields: ["status", "category"],
     }),
   abstractFiles: defineTable(abstractFileFields)

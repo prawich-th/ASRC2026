@@ -3,7 +3,6 @@ import {
   affiliationKey,
   normalizeAffiliationInput,
 } from "../lib/affiliation";
-import { STARTER_AFFILIATIONS } from "../lib/affiliationSeed";
 import { Doc, Id } from "./_generated/dataModel";
 import { mutation, MutationCtx, query } from "./_generated/server";
 import {
@@ -291,15 +290,45 @@ export const merge = mutation({
   },
 });
 
-export const importStarterList = mutation({
-  args: {},
-  returns: v.object({ added: v.number(), skipped: v.number() }),
-  handler: async (ctx) => {
+const MAX_IMPORT_BATCH = 200;
+
+/**
+ * Adds verified affiliations from an uploaded CSV, one batch at a time.
+ * Rows matching an existing entry (in any status) are skipped.
+ */
+export const importBatch = mutation({
+  args: {
+    affiliations: v.array(v.object(affiliationInputFields)),
+  },
+  returns: v.object({
+    added: v.number(),
+    skipped: v.number(),
+    errors: v.array(v.object({ index: v.number(), message: v.string() })),
+  }),
+  handler: async (ctx, args) => {
     const manager = await requireRole(ctx, MANAGER_ROLES);
+    if (
+      args.affiliations.length === 0 ||
+      args.affiliations.length > MAX_IMPORT_BATCH
+    ) {
+      throw new Error(
+        `Import batches must contain between 1 and ${MAX_IMPORT_BATCH} affiliations`,
+      );
+    }
     let added = 0;
     let skipped = 0;
-    for (const entry of STARTER_AFFILIATIONS) {
-      const input = normalizeAffiliationInput(entry);
+    const errors: Array<{ index: number; message: string }> = [];
+    for (const [index, entry] of args.affiliations.entries()) {
+      let input;
+      try {
+        input = normalizeAffiliationInput(entry);
+      } catch (caught) {
+        errors.push({
+          index,
+          message: caught instanceof Error ? caught.message : "Invalid row",
+        });
+        continue;
+      }
       const normalizedKey = affiliationKey(input);
       if (await findByKey(ctx, normalizedKey)) {
         skipped++;
@@ -314,6 +343,6 @@ export const importStarterList = mutation({
       });
       added++;
     }
-    return { added, skipped };
+    return { added, skipped, errors };
   },
 });

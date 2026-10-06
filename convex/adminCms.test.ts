@@ -74,7 +74,11 @@ describe("tiered administration", () => {
         title: "Deadline Extended",
         slug: "deadline-extended",
         summary: "The submission deadline has been extended.",
-        body: "## New deadline\n\nPlease submit before the revised date.",
+        bodyRich: [
+        { insert: "New deadline" },
+        { insert: "\n", attributes: { header: 2 } },
+        { insert: "Please submit before the revised date.\n" },
+      ],
         tags: [{ name: "New", tone: "primary" }],
         authorName: "Conference Office",
         authorTitle: "Public Relations Manager",
@@ -87,7 +91,11 @@ describe("tiered administration", () => {
       title: "Deadline Extended",
       slug: "deadline-extended",
       summary: "The submission deadline has been extended.",
-      body: "## New deadline\n\nPlease submit before the revised date.",
+      bodyRich: [
+        { insert: "New deadline" },
+        { insert: "\n", attributes: { header: 2 } },
+        { insert: "Please submit before the revised date.\n" },
+      ],
       tags: [{ name: "New", tone: "primary" }],
       authorName: "Conference Office",
       authorTitle: "Public Relations Manager",
@@ -122,7 +130,7 @@ describe("tiered administration", () => {
       title: "Registration is open",
       slug: "registration-open",
       summary: "Registration for ASRC 2027 is now open.",
-      body: "Register now.",
+      bodyRich: [{ insert: "Register now.\n" }],
       tags: [{ name: "Registration", tone: "primary" }],
       authorName: "Conference Office",
       authorTitle: "Conference Coordinator",
@@ -226,6 +234,7 @@ describe("tiered administration", () => {
     });
     const draft = await participant.mutation(api.abstracts.createDraft, {
       title: "Transactional Receipt Study",
+      studyType: "observational",
       authorList: [{ name: "Arun Researcher", affiliationId, presenting: true }],
       advisor: "Dr Faculty Advisor",
       advisorAffiliationId: affiliationId,
@@ -324,6 +333,7 @@ describe("tiered administration", () => {
     await participant.mutation(api.abstracts.updateDraft, {
       abstractId,
       title: "Revision Study",
+      studyType: "observational",
       authorList: [{ name: "Arun Researcher", affiliationId, presenting: true }],
       advisor: "Dr Faculty Advisor",
       advisorAffiliationId: affiliationId,

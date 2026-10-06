@@ -44,6 +44,7 @@ async function setup() {
 function draftArgs(affiliationId: Id<"affiliations">, body: string) {
   return {
     title: "Sleep and memory",
+    studyType: "experimental" as const,
     authorList: [{ name: "Alice Author", affiliationId, presenting: true }],
     advisor: "Dr Advisor",
     advisorAffiliationId: affiliationId,

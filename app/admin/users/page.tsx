@@ -1,25 +1,65 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
+import FilterChips, { ActiveFilter } from "@/components/admin/filter-chips";
 import Pager, { PageSize, usePages } from "@/components/admin/pager";
-import Button from "@/components/form/button";
 import {
-  FileUploadField,
-  FormField,
-  SelectField,
-} from "@/components/form/Form";
+  oneOf,
+  useDebouncedSearch,
+  useUrlFilters,
+} from "@/components/admin/use-url-filters";
+import AffiliationPicker from "@/components/affiliations/affiliation-picker";
+import Button from "@/components/form/button";
+import { FileUploadField } from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { getRoleLabel, StaffRole, STAFF_ROLES } from "@/lib/adminRoles";
+import { formatAffiliation } from "@/lib/affiliation";
+import { PARTICIPANT_CATEGORIES } from "@/lib/formOptions";
 import {
   ImportedUser,
   parseUserImport,
   USER_IMPORT_TEMPLATE,
   UserImportError,
 } from "@/lib/userImport";
-import { useMutation, usePaginatedQuery } from "convex/react";
-import { ChangeEvent, useEffect, useState } from "react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import Link from "next/link";
+import { ChangeEvent, Suspense, useState } from "react";
+
+const FILTER_KEYS = [
+  "q",
+  "role",
+  "category",
+  "affiliation",
+  "profile",
+  "account",
+  "notifications",
+  "sort",
+] as const;
+
+const ROLE_FILTERS = [...STAFF_ROLES, "none"] as const;
+const PROFILE_FILTERS = ["complete", "incomplete"] as const;
+const ACCOUNT_FILTERS = ["registered", "awaiting_signup"] as const;
+const NOTIFICATION_FILTERS = ["subscribed", "unsubscribed"] as const;
+const SORT_OPTIONS = ["newest", "oldest"] as const;
+
+const PROFILE_LABELS = {
+  complete: "Profile complete",
+  incomplete: "Profile incomplete",
+} as const;
+const ACCOUNT_LABELS = {
+  registered: "Registered",
+  awaiting_signup: "Awaiting signup",
+} as const;
+const NOTIFICATION_LABELS = {
+  subscribed: "Receives updates",
+  unsubscribed: "Opted out of updates",
+} as const;
+
+function roleFilterLabel(role: (typeof ROLE_FILTERS)[number]) {
+  return role === "none" ? "Participants (no staff role)" : getRoleLabel(role);
+}
 
 function getInitials(user: {
   firstName?: string;
@@ -40,23 +80,129 @@ function getInitials(user: {
 }
 
 export default function AdminUsersPage() {
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [role, setRoleFilter] = useState<StaffRole | "">("");
-  const [pageSize, setPageSize] = useState<PageSize>(25);
-  const query = usePaginatedQuery(
-    api.adminUsers.list,
-    {
-      search: debouncedSearch || undefined,
-      role: role || undefined,
-    },
-    { initialNumItems: pageSize },
+  return (
+    <Suspense fallback={<LoadingScreen variant="inline" what="users" />}>
+      <UsersDirectory />
+    </Suspense>
   );
+}
+
+function UsersDirectory() {
+  const [filters, setFilters] = useUrlFilters(FILTER_KEYS);
+  const [search, setSearch] = useDebouncedSearch(filters.q, (q) =>
+    setFilters({ q }),
+  );
+  const role = oneOf(filters.role, ROLE_FILTERS);
+  const participantCategory = oneOf(filters.category, PARTICIPANT_CATEGORIES);
+  // Ignore hand-edited values that cannot be document IDs.
+  const affiliationId = /^[0-9a-z]{20,40}$/.test(filters.affiliation)
+    ? (filters.affiliation as Id<"affiliations">)
+    : undefined;
+  const profile = oneOf(filters.profile, PROFILE_FILTERS);
+  const account = oneOf(filters.account, ACCOUNT_FILTERS);
+  const notifications = oneOf(filters.notifications, NOTIFICATION_FILTERS);
+  const order = oneOf(filters.sort, SORT_OPTIONS) ?? "newest";
+  const [pageSize, setPageSize] = useState<PageSize>(25);
+  const queryArgs = {
+    search: filters.q || undefined,
+    role,
+    participantCategory,
+    affiliationId,
+    profile,
+    account,
+    notifications,
+    order,
+  };
+  const query = usePaginatedQuery(api.adminUsers.list, queryArgs, {
+    initialNumItems: pageSize,
+  });
   const pages = usePages(
     query,
     pageSize,
-    JSON.stringify([debouncedSearch, role, pageSize]),
+    JSON.stringify([queryArgs, pageSize]),
   );
+  const selectedAffiliation = useQuery(
+    api.affiliations.getById,
+    affiliationId ? { affiliationId } : "skip",
+  );
+
+  const activeFilters: ActiveFilter[] = [
+    ...(filters.q
+      ? [
+          {
+            key: "q",
+            label: `“${filters.q}”`,
+            onRemove: () => setFilters({ q: "" }),
+          },
+        ]
+      : []),
+    ...(role
+      ? [
+          {
+            key: "role",
+            label: roleFilterLabel(role),
+            onRemove: () => setFilters({ role: "" }),
+          },
+        ]
+      : []),
+    ...(participantCategory
+      ? [
+          {
+            key: "category",
+            label: participantCategory,
+            onRemove: () => setFilters({ category: "" }),
+          },
+        ]
+      : []),
+    ...(affiliationId
+      ? [
+          {
+            key: "affiliation",
+            label: selectedAffiliation
+              ? formatAffiliation(selectedAffiliation)
+              : "Selected affiliation",
+            onRemove: () => setFilters({ affiliation: "" }),
+          },
+        ]
+      : []),
+    ...(profile
+      ? [
+          {
+            key: "profile",
+            label: PROFILE_LABELS[profile],
+            onRemove: () => setFilters({ profile: "" }),
+          },
+        ]
+      : []),
+    ...(account
+      ? [
+          {
+            key: "account",
+            label: ACCOUNT_LABELS[account],
+            onRemove: () => setFilters({ account: "" }),
+          },
+        ]
+      : []),
+    ...(notifications
+      ? [
+          {
+            key: "notifications",
+            label: NOTIFICATION_LABELS[notifications],
+            onRemove: () => setFilters({ notifications: "" }),
+          },
+        ]
+      : []),
+  ];
+
+  function clearFilters() {
+    setFilters(
+      Object.fromEntries(FILTER_KEYS.map((key) => [key, ""])) as Record<
+        (typeof FILTER_KEYS)[number],
+        string
+      >,
+    );
+  }
+
   const setUserRole = useMutation(api.adminUsers.setRole);
   const importPreRegistered = useMutation(api.adminUsers.importPreRegistered);
   const [savingId, setSavingId] = useState<Id<"users"> | null>(null);
@@ -72,13 +218,6 @@ export default function AdminUsersPage() {
     skipped: number;
     invalid: number;
   } | null>(null);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedSearch(search.trim());
-    }, 300);
-    return () => window.clearTimeout(timeout);
-  }, [search]);
 
   async function changeRole(userId: Id<"users">, value: string) {
     setError("");
@@ -170,13 +309,16 @@ export default function AdminUsersPage() {
           <h1>Users</h1>
           <p>Review participant profiles and assign staff access.</p>
         </div>
-        <Button
-          className="green"
-          type="button"
-          onClick={() => setShowImport((visible) => !visible)}
-        >
-          {showImport ? "Close import" : "Import users"}
-        </Button>
+        <div className={styles.actions}>
+          <Link href="/admin/users/profile-debug">Profile debugger</Link>
+          <Button
+            className="green"
+            type="button"
+            onClick={() => setShowImport((visible) => !visible)}
+          >
+            {showImport ? "Close import" : "Import users"}
+          </Button>
+        </div>
       </div>
       {showImport ? (
         <section className={styles.importPanel}>
@@ -274,29 +416,124 @@ export default function AdminUsersPage() {
           ) : null}
         </section>
       ) : null}
-      <div className={styles.filters}>
-        <FormField
-          label="Search users"
-          type="search"
-          value={search}
-          placeholder="Name, email, phone, institution, or department"
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <SelectField
-          label="Role"
-          value={role}
-          options={[
-            { value: "", label: "All roles" },
-            ...STAFF_ROLES.map((value) => ({
-              value,
-              label: getRoleLabel(value),
-            })),
-          ]}
-          onChange={(event) =>
-            setRoleFilter(event.target.value as StaffRole | "")
-          }
-        />
+      <div className={styles.filterPanel}>
+        <label className={styles.filterSearch}>
+          Search users
+          <input
+            className={styles.field}
+            type="search"
+            value={search}
+            placeholder="Name, email, phone, institution, department, specialty, position, or city"
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        <label>
+          Role
+          <select
+            className={styles.select}
+            value={role ?? ""}
+            onChange={(event) => setFilters({ role: event.target.value })}
+          >
+            <option value="">All roles</option>
+            {ROLE_FILTERS.map((value) => (
+              <option key={value} value={value}>
+                {roleFilterLabel(value)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Participant category
+          <select
+            className={styles.select}
+            value={participantCategory ?? ""}
+            onChange={(event) => setFilters({ category: event.target.value })}
+          >
+            <option value="">All categories</option>
+            {PARTICIPANT_CATEGORIES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Profile
+          <select
+            className={styles.select}
+            value={profile ?? ""}
+            onChange={(event) => setFilters({ profile: event.target.value })}
+          >
+            <option value="">Any profile status</option>
+            {PROFILE_FILTERS.map((value) => (
+              <option key={value} value={value}>
+                {PROFILE_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Account
+          <select
+            className={styles.select}
+            value={account ?? ""}
+            onChange={(event) => setFilters({ account: event.target.value })}
+          >
+            <option value="">Any account status</option>
+            {ACCOUNT_FILTERS.map((value) => (
+              <option key={value} value={value}>
+                {ACCOUNT_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Email updates
+          <select
+            className={styles.select}
+            value={notifications ?? ""}
+            onChange={(event) =>
+              setFilters({ notifications: event.target.value })
+            }
+          >
+            <option value="">Anyone</option>
+            {NOTIFICATION_FILTERS.map((value) => (
+              <option key={value} value={value}>
+                {NOTIFICATION_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className={styles.filterPicker}>
+          <AffiliationPicker
+            label="Affiliation"
+            value={affiliationId}
+            allowAdd={false}
+            placeholder="Any affiliation"
+            onChange={(id) => setFilters({ affiliation: id ?? "" })}
+          />
+        </div>
+        <label>
+          Sort by
+          <select
+            className={styles.select}
+            value={order}
+            disabled={Boolean(filters.q)}
+            title={
+              filters.q ? "Search results are sorted by relevance" : undefined
+            }
+            onChange={(event) =>
+              setFilters({
+                sort: event.target.value === "newest" ? "" : event.target.value,
+              })
+            }
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </label>
       </div>
+      <FilterChips filters={activeFilters} onClearAll={clearFilters} />
       {error ? <p className={styles.error}>{error}</p> : null}
       {pages.loadingPage ? (
         <LoadingScreen variant="inline" what="users" />
@@ -308,7 +545,7 @@ export default function AdminUsersPage() {
                 <th>Participant</th>
                 <th>Organization</th>
                 <th>Status</th>
-                <th>Access</th>
+                <th>Actions &amp; access</th>
               </tr>
             </thead>
             <tbody>
@@ -336,7 +573,9 @@ export default function AdminUsersPage() {
                       </div>
                       <div className={styles.userIdentityText}>
                         <strong>
-                          {user.name || user.email || "Unnamed user"}
+                          <Link href={`/admin/users/${user._id}`}>
+                            {user.name || user.email || "Unnamed user"}
+                          </Link>
                         </strong>
                         {user.email ? (
                           <a href={`mailto:${user.email}`}>{user.email}</a>
@@ -378,6 +617,14 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td>
+                    <div className={styles.actions}>
+                      <Link href={`/admin/users/${user._id}`}>Edit</Link>
+                      <Link
+                        href={`/admin/users/profile-debug?user=${user._id}`}
+                      >
+                        Test profile
+                      </Link>
+                    </div>
                     <select
                       className={styles.select}
                       aria-label={`Role for ${user.name || user.email || "user"}`}
@@ -400,8 +647,8 @@ export default function AdminUsersPage() {
               {pages.items.length === 0 ? (
                 <tr>
                   <td className={styles.empty} colSpan={4}>
-                    {debouncedSearch
-                      ? "No users match your search."
+                    {activeFilters.length > 0
+                      ? "No users match the selected filters."
                       : "No users found."}
                   </td>
                 </tr>

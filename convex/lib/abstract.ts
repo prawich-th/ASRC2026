@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { affiliationValidator } from "./affiliation";
-import { ABSTRACT_CATEGORIES, ABSTRACT_STATUSES } from "../../lib/formOptions";
+import {
+  ABSTRACT_CATEGORIES,
+  ABSTRACT_STATUSES,
+  ABSTRACT_STUDY_TYPES,
+} from "../../lib/formOptions";
 
 const abstractCategoryLiterals = ABSTRACT_CATEGORIES.map((category) =>
   v.literal(category),
@@ -11,6 +15,17 @@ export const abstractCategoryValidator = v.union(
   ...(abstractCategoryLiterals as [
     (typeof abstractCategoryLiterals)[number],
     ...(typeof abstractCategoryLiterals)[number][],
+  ]),
+);
+
+const abstractStudyTypeLiterals = ABSTRACT_STUDY_TYPES.map((type) =>
+  v.literal(type),
+);
+
+export const abstractStudyTypeValidator = v.union(
+  ...(abstractStudyTypeLiterals as [
+    (typeof abstractStudyTypeLiterals)[number],
+    ...(typeof abstractStudyTypeLiterals)[number][],
   ]),
 );
 
@@ -48,6 +63,9 @@ export const abstractFields = {
   ownerId: v.id("users"),
   code: v.string(),
   title: v.string(),
+  studyType: v.optional(abstractStudyTypeValidator),
+  /** Free-text description when `studyType` is "other". */
+  studyTypeOther: v.optional(v.string()),
   /** Structured author rows; replaces the legacy free-text `authors`. */
   authorList: v.optional(v.array(abstractAuthorValidator)),
   advisor: v.optional(v.string()),
@@ -70,6 +88,11 @@ export const abstractFields = {
   submitterFeedback: v.optional(v.string()),
   reviewedBy: v.optional(v.id("users")),
   reviewedAt: v.optional(v.number()),
+  /**
+   * Denormalized title, code, keywords, authors, affiliations, and submitter
+   * details for the staff search index.
+   */
+  searchText: v.optional(v.string()),
 };
 
 export const abstractValidator = v.object({
@@ -78,6 +101,8 @@ export const abstractValidator = v.object({
   ownerId: v.id("users"),
   code: v.string(),
   title: v.string(),
+  studyType: v.optional(abstractStudyTypeValidator),
+  studyTypeOther: v.optional(v.string()),
   authorList: v.optional(v.array(abstractAuthorValidator)),
   advisor: v.optional(v.string()),
   advisorAffiliationId: v.optional(v.id("affiliations")),
@@ -161,6 +186,10 @@ export const adminAbstractSummaryValidator = v.object({
     _creationTime: v.number(),
     code: v.string(),
     title: v.string(),
+    keywords: v.array(v.string()),
+    authorNames: v.array(v.string()),
+    studyType: v.optional(abstractStudyTypeValidator),
+    studyTypeOther: v.optional(v.string()),
     category: v.optional(abstractCategoryValidator),
     status: abstractStatusValidator,
     submittedAt: v.optional(v.number()),
@@ -175,4 +204,24 @@ export const adminAbstractDetailValidator = v.object({
   owner: abstractOwnerValidator,
   affiliations: v.array(affiliationValidator),
   files: v.array(abstractFileWithUrlValidator),
+});
+
+export const abstractListFiltersValidator = v.object({
+  search: v.optional(v.string()),
+  status: v.optional(
+    v.union(
+      v.literal("submitted"),
+      v.literal("revision_requested"),
+      v.literal("selected"),
+      v.literal("rejected"),
+    ),
+  ),
+  /** A presentation category, or "none" for abstracts without one yet. */
+  category: v.optional(v.union(abstractCategoryValidator, v.literal("none"))),
+  /** Inclusive lower and exclusive upper bounds on `submittedAt`. */
+  submittedFrom: v.optional(v.number()),
+  submittedTo: v.optional(v.number()),
+  reviewed: v.optional(v.union(v.literal("reviewed"), v.literal("unreviewed"))),
+  studyType: v.optional(abstractStudyTypeValidator),
+  order: v.optional(v.union(v.literal("newest"), v.literal("oldest"))),
 });

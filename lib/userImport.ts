@@ -3,6 +3,7 @@ import {
   PREFIXES,
   USER_ROLES,
 } from "./formOptions";
+import { parseCsvRows } from "./csv";
 import { normalizeEmail } from "./userData";
 
 export const USER_IMPORT_HEADERS = [
@@ -47,49 +48,6 @@ export type UserImportError = {
 export const USER_IMPORT_TEMPLATE = `${USER_IMPORT_HEADERS.join(",")}
 person@example.com,Dr.,Jane,,Researcher,,Cardiology,+66123456789,Example University,Faculty,Medicine,Researcher,Bangkok,
 `;
-
-function parseCsvRows(csv: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let value = "";
-  let quoted = false;
-
-  for (let index = 0; index < csv.length; index += 1) {
-    const character = csv[index];
-    if (character === '"') {
-      if (quoted && csv[index + 1] === '"') {
-        value += '"';
-        index += 1;
-      } else {
-        quoted = !quoted;
-      }
-    } else if (character === "," && !quoted) {
-      row.push(value);
-      value = "";
-    } else if ((character === "\n" || character === "\r") && !quoted) {
-      if (character === "\r" && csv[index + 1] === "\n") {
-        index += 1;
-      }
-      row.push(value);
-      if (row.some((cell) => cell.trim())) {
-        rows.push(row);
-      }
-      row = [];
-      value = "";
-    } else {
-      value += character;
-    }
-  }
-
-  if (quoted) {
-    throw new Error("The CSV contains an unclosed quoted value");
-  }
-  row.push(value);
-  if (row.some((cell) => cell.trim())) {
-    rows.push(row);
-  }
-  return rows;
-}
 
 function optional(value: string): string | undefined {
   return value.trim() || undefined;

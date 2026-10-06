@@ -7,9 +7,13 @@ import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ABSTRACT_STEPS,
   AbstractStepKey,
+  AbstractStudyType,
   getAbstractProblems,
   MAX_ABSTRACT_TITLE_LENGTH,
+  MAX_STUDY_TYPE_OTHER_LENGTH,
+  STUDY_TYPE_LABELS,
 } from "@/lib/abstractForm";
+import { ABSTRACT_STUDY_TYPES } from "@/lib/formOptions";
 import {
   ABSTRACT_WORD_LIMIT,
   countWords,
@@ -27,6 +31,7 @@ import styles from "./abstract-editor.module.scss";
 import AuthorListEditor, { AuthorRow, newAuthorRow } from "./author-list-editor";
 import KeywordInput from "./keyword-input";
 import RichTextEditor from "./rich-text-editor";
+import SupportingFiles from "./supporting-files";
 
 type OwnerDetail = NonNullable<
   FunctionReturnType<typeof api.abstracts.getMineById>
@@ -35,6 +40,8 @@ type CurrentUser = NonNullable<FunctionReturnType<typeof api.users.me>>;
 
 type FormState = {
   title: string;
+  studyType?: AbstractStudyType;
+  studyTypeOther: string;
   keywords: string[];
   authors: AuthorRow[];
   advisor: string;
@@ -58,6 +65,8 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
     const abstract = detail.abstract;
     return {
       title: abstract.title,
+      studyType: abstract.studyType,
+      studyTypeOther: abstract.studyTypeOther ?? "",
       keywords: abstract.keywords,
       authors: (abstract.authorList ?? []).map((author) => newAuthorRow(author)),
       advisor: abstract.advisor ?? "",
@@ -68,6 +77,7 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
   }
   return {
     title: "",
+    studyTypeOther: "",
     keywords: [],
     authors: [
       newAuthorRow({
@@ -85,6 +95,8 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
 function toPayload(form: FormState) {
   return {
     title: form.title,
+    studyType: form.studyType,
+    studyTypeOther: form.studyType === "other" ? form.studyTypeOther : undefined,
     keywords: form.keywords,
     authorList: form.authors.map(({ name, affiliationId, presenting }) => ({
       name,
@@ -169,6 +181,8 @@ export default function AbstractEditor({
   const wordCount = countWords(bodyText);
   const problems = getAbstractProblems({
     title: form.title,
+    studyType: form.studyType,
+    studyTypeOther: form.studyTypeOther,
     authorList: form.authors,
     advisor: form.advisor,
     advisorAffiliationId: form.advisorAffiliationId,
@@ -393,10 +407,10 @@ export default function AbstractEditor({
         {currentStepKey === "details" ? (
           <>
             <header className={styles.stepHeader}>
-              <h2>Title &amp; keywords</h2>
+              <h2>Study details</h2>
               <p>
-                Give your research a clear, concise title and up to 10
-                keywords that describe it.
+                Give your research a clear, concise title, say what kind of
+                study it is, and add up to 10 keywords that describe it.
               </p>
             </header>
             <div className={styles.fieldStack}>
@@ -422,6 +436,50 @@ export default function AbstractEditor({
                   {form.title.length}/{MAX_ABSTRACT_TITLE_LENGTH}
                 </small>
               </label>
+              <fieldset
+                className={`${styles.studyTypes} ${
+                  showErrors("details") && !form.studyType
+                    ? styles.studyTypesInvalid
+                    : ""
+                }`}
+              >
+                <legend>Type of study</legend>
+                {ABSTRACT_STUDY_TYPES.map((type) => (
+                  <label key={type} className={styles.studyTypeOption}>
+                    <input
+                      type="radio"
+                      name="abstract-study-type"
+                      value={type}
+                      checked={form.studyType === type}
+                      onChange={() => patch({ studyType: type })}
+                    />
+                    <span>
+                      {type === "other"
+                        ? "Other (please specify)"
+                        : STUDY_TYPE_LABELS[type]}
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              {form.studyType === "other" ? (
+                <label className={styles.field} htmlFor="abstract-study-type-other">
+                  <span>Please specify the type of study</span>
+                  <input
+                    id="abstract-study-type-other"
+                    maxLength={MAX_STUDY_TYPE_OTHER_LENGTH}
+                    value={form.studyTypeOther}
+                    autoFocus
+                    className={
+                      showErrors("details") && !form.studyTypeOther.trim()
+                        ? styles.inputInvalid
+                        : undefined
+                    }
+                    onChange={(event) =>
+                      patch({ studyTypeOther: event.target.value })
+                    }
+                  />
+                </label>
+              ) : null}
               <div className={styles.field}>
                 <label htmlFor="abstract-keywords">Keywords</label>
                 <KeywordInput
@@ -507,7 +565,6 @@ export default function AbstractEditor({
             <RichTextEditor
               labelledBy="abstract-body-label"
               initialValue={form.bodyOps}
-              placeholder="Background: … Objectives: … Methods: … Results: … Conclusion: …"
               invalid={
                 wordCount > ABSTRACT_WORD_LIMIT ||
                 (showErrors("abstract") && wordCount === 0)
@@ -547,6 +604,11 @@ export default function AbstractEditor({
                   : ""}
               </span>
             </div>
+            <SupportingFiles
+              abstractId={abstractId}
+              editable
+              ensureSaved={() => persist({ force: true })}
+            />
           </>
         ) : null}
 
@@ -559,6 +621,8 @@ export default function AbstractEditor({
             <AbstractPreview
               abstract={{
                 title: form.title,
+                studyType: form.studyType,
+                studyTypeOther: form.studyTypeOther,
                 authorList: form.authors,
                 advisor: form.advisor,
                 advisorAffiliationId: form.advisorAffiliationId,

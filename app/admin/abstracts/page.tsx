@@ -2,6 +2,7 @@
 
 import AbstractReviewPanel from "@/components/admin/abstract-review-panel";
 import styles from "@/components/admin/admin.module.scss";
+import { useDebouncedSearch } from "@/components/admin/use-url-filters";
 import Button from "@/components/form/button";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
@@ -27,9 +28,21 @@ function ReviewQueue() {
   const [dismissedIds, setDismissedIds] = useState<Set<Id<"abstracts">>>(
     () => new Set(),
   );
+  const [committedSearch, setCommittedSearch] = useState("");
+  const [search, setSearch] = useDebouncedSearch(
+    committedSearch,
+    setCommittedSearch,
+  );
+  const [category, setCategory] = useState<"" | "oral" | "poster" | "none">(
+    "",
+  );
   const query = usePaginatedQuery(
     api.abstracts.listForReview,
-    { status: "submitted" },
+    {
+      status: "submitted",
+      search: committedSearch || undefined,
+      category: category || undefined,
+    },
     { initialNumItems: 50 },
   );
   const queue = query.results.filter(
@@ -61,11 +74,36 @@ function ReviewQueue() {
           <p>
             {queue.length} loaded submission{queue.length === 1 ? "" : "s"}
           </p>
+          <input
+            className={styles.field}
+            type="search"
+            aria-label="Search the review queue"
+            placeholder="Search title, ID, author, or keyword"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <select
+            className={styles.select}
+            aria-label="Filter by category"
+            value={category}
+            onChange={(event) =>
+              setCategory(event.target.value as typeof category)
+            }
+          >
+            <option value="">All categories</option>
+            <option value="oral">Oral presentation</option>
+            <option value="poster">Poster presentation</option>
+            <option value="none">No category yet</option>
+          </select>
         </div>
         {query.status === "LoadingFirstPage" ? (
           <LoadingScreen variant="inline" what="abstracts" />
         ) : queue.length === 0 ? (
-          <p className={styles.empty}>All loaded abstracts are reviewed.</p>
+          <p className={styles.empty}>
+            {committedSearch || category
+              ? "No pending abstracts match."
+              : "All loaded abstracts are reviewed."}
+          </p>
         ) : (
           <ul className={styles.queueList}>
             {queue.map((item) => (
@@ -110,7 +148,11 @@ function ReviewQueue() {
         <div className={styles.reviewState}>
           <div>
             <h2>Review queue complete</h2>
-            <p>There are no submitted abstracts waiting for a decision.</p>
+            <p>
+              {committedSearch || category
+                ? "No submitted abstracts match the current search."
+                : "There are no submitted abstracts waiting for a decision."}
+            </p>
           </div>
         </div>
       )}
