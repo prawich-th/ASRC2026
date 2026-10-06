@@ -7,7 +7,14 @@ import { Id } from "./_generated/dataModel";
 import { mutation, MutationCtx, query } from "./_generated/server";
 import { requireRole } from "./lib/auth";
 import {
+  RICH_DOCUMENT_MAX_OPS,
+  RichDocumentOp,
+  richDocumentToPlainText,
+  sanitizeRichDocument,
+} from "../lib/richDocument";
+import {
   announcementTagValidator,
+  richDocumentOpValidator,
   announcementStatusValidator,
   announcementValidator,
 } from "./lib/content";
@@ -51,7 +58,7 @@ function normalizeContent(args: {
   title: string;
   slug: string;
   summary: string;
-  body: string;
+  bodyRich: RichDocumentOp[];
   tags: AnnouncementTag[];
   authorName: string;
   authorTitle: string;
@@ -60,7 +67,11 @@ function normalizeContent(args: {
 }) {
   const title = args.title.trim();
   const summary = args.summary.trim();
-  const body = args.body.trim();
+  const bodyRich = sanitizeRichDocument(args.bodyRich);
+  if (bodyRich.length > RICH_DOCUMENT_MAX_OPS) {
+    throw new Error("The announcement has too much formatting to save");
+  }
+  const body = richDocumentToPlainText(bodyRich);
   const authorName = args.authorName.trim();
   const authorTitle = args.authorTitle.trim();
   const departmentName = args.departmentName.trim();
@@ -72,7 +83,7 @@ function normalizeContent(args: {
     throw new Error("Summary must be between 1 and 500 characters");
   }
   if (!body) {
-    throw new Error("Markdown body is required");
+    throw new Error("The announcement body is required");
   }
   if (!authorName || authorName.length > 120) {
     throw new Error("Author name must be between 1 and 120 characters");
@@ -94,6 +105,7 @@ function normalizeContent(args: {
     slug: normalizeSlug(args.slug),
     summary,
     body,
+    bodyRich,
     tags: normalizeTags(args.tags),
     authorName,
     authorTitle,
@@ -206,7 +218,7 @@ export const create = mutation({
     title: v.string(),
     slug: v.string(),
     summary: v.string(),
-    body: v.string(),
+    bodyRich: v.array(richDocumentOpValidator),
     tags: v.array(announcementTagValidator),
     authorName: v.string(),
     authorTitle: v.string(),
@@ -238,7 +250,7 @@ export const update = mutation({
     title: v.string(),
     slug: v.string(),
     summary: v.string(),
-    body: v.string(),
+    bodyRich: v.array(richDocumentOpValidator),
     tags: v.array(announcementTagValidator),
     authorName: v.string(),
     authorTitle: v.string(),
@@ -292,6 +304,7 @@ export const publish = mutation({
           title: updated.title,
           summary: updated.summary,
           body: updated.body,
+          bodyRich: updated.bodyRich,
           url: getSiteUrl(`/announcements/${updated.slug}`),
         }),
       });

@@ -24,6 +24,7 @@ import {
   UserImportError,
 } from "@/lib/userImport";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import Link from "next/link";
 import { ChangeEvent, Suspense, useState } from "react";
 
 const FILTER_KEYS = [
@@ -308,13 +309,16 @@ function UsersDirectory() {
           <h1>Users</h1>
           <p>Review participant profiles and assign staff access.</p>
         </div>
-        <Button
-          className="green"
-          type="button"
-          onClick={() => setShowImport((visible) => !visible)}
-        >
-          {showImport ? "Close import" : "Import users"}
-        </Button>
+        <div className={styles.actions}>
+          <Link href="/admin/users/profile-debug">Profile debugger</Link>
+          <Button
+            className="green"
+            type="button"
+            onClick={() => setShowImport((visible) => !visible)}
+          >
+            {showImport ? "Close import" : "Import users"}
+          </Button>
+        </div>
       </div>
       {showImport ? (
         <section className={styles.importPanel}>
@@ -541,7 +545,7 @@ function UsersDirectory() {
                 <th>Participant</th>
                 <th>Organization</th>
                 <th>Status</th>
-                <th>Access</th>
+                <th>Actions &amp; access</th>
               </tr>
             </thead>
             <tbody>
@@ -569,7 +573,9 @@ function UsersDirectory() {
                       </div>
                       <div className={styles.userIdentityText}>
                         <strong>
-                          {user.name || user.email || "Unnamed user"}
+                          <Link href={`/admin/users/${user._id}`}>
+                            {user.name || user.email || "Unnamed user"}
+                          </Link>
                         </strong>
                         {user.email ? (
                           <a href={`mailto:${user.email}`}>{user.email}</a>
@@ -611,6 +617,14 @@ function UsersDirectory() {
                     </div>
                   </td>
                   <td>
+                    <div className={styles.actions}>
+                      <Link href={`/admin/users/${user._id}`}>Edit</Link>
+                      <Link
+                        href={`/admin/users/profile-debug?user=${user._id}`}
+                      >
+                        Test profile
+                      </Link>
+                    </div>
                     <select
                       className={styles.select}
                       aria-label={`Role for ${user.name || user.email || "user"}`}

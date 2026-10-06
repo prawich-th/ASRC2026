@@ -4,7 +4,12 @@ import {
 } from "convex/server";
 import { Infer, v } from "convex/values";
 import {
+  formatStudyType,
   getAbstractProblems,
+  isAllowedSupportingFile,
+  MAX_STUDY_TYPE_OTHER_LENGTH,
+  MAX_SUPPORTING_FILE_BYTES,
+  MAX_SUPPORTING_FILES,
   MAX_ABSTRACT_AUTHORS,
   MAX_ABSTRACT_KEYWORDS,
   MAX_ABSTRACT_TITLE_LENGTH,
@@ -33,6 +38,7 @@ import {
   abstractCategoryValidator,
   abstractDetailValidator,
   abstractListFiltersValidator,
+  abstractStudyTypeValidator,
   abstractSummaryValidator,
   abstractValidator,
   adminAbstractDetailValidator,
@@ -106,6 +112,7 @@ async function refreshSearchText(
   const searchText = [
     abstract.code,
     abstract.title,
+    formatStudyType(abstract.studyType, abstract.studyTypeOther),
     ...abstract.keywords,
     ...(abstract.authorList ?? []).map((author) => author.name),
     abstract.advisor,
@@ -131,6 +138,8 @@ function toOwnerAbstract(abstract: Doc<"abstracts">) {
     ownerId: abstract.ownerId,
     code: abstract.code ?? "",
     title: abstract.title,
+    studyType: abstract.studyType,
+    studyTypeOther: abstract.studyTypeOther,
     authorList: abstract.authorList,
     advisor: abstract.advisor,
     advisorAffiliationId: abstract.advisorAffiliationId,
@@ -188,6 +197,8 @@ async function withAffiliations(
 
 const draftValidator = v.object({
   title: v.string(),
+  studyType: v.optional(abstractStudyTypeValidator),
+  studyTypeOther: v.optional(v.string()),
   authorList: v.array(abstractAuthorValidator),
   advisor: v.string(),
   advisorAffiliationId: v.optional(v.id("affiliations")),
@@ -203,6 +214,17 @@ async function normalizeDraft(ctx: MutationCtx, args: DraftArgs) {
   if (title.length > MAX_ABSTRACT_TITLE_LENGTH) {
     throw new Error(
       `The title must be at most ${MAX_ABSTRACT_TITLE_LENGTH} characters`,
+    );
+  }
+
+  const studyType = args.studyType;
+  const studyTypeOther =
+    studyType === "other"
+      ? args.studyTypeOther?.replace(/\s+/g, " ").trim() || undefined
+      : undefined;
+  if ((studyTypeOther?.length ?? 0) > MAX_STUDY_TYPE_OTHER_LENGTH) {
+    throw new Error(
+      `The study type must be at most ${MAX_STUDY_TYPE_OTHER_LENGTH} characters`,
     );
   }
 
@@ -259,6 +281,8 @@ async function normalizeDraft(ctx: MutationCtx, args: DraftArgs) {
 
   return {
     title,
+    studyType,
+    studyTypeOther,
     authorList,
     advisor,
     advisorAffiliationId,
@@ -432,6 +456,94 @@ export const deleteDraft = mutation({
   },
 });
 
+export const generateSupportingFileUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    await getCurrentUser(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/** Attaches an uploaded file as optional supporting material. */
+export const addSupportingFile = mutation({
+  args: {
+    abstractId: v.id("abstracts"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+  },
+  returns: v.id("abstractFiles"),
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const abstract = await getOwnedAbstractOrThrow(ctx, user._id, args.abstractId);
+    const discard = async (message: string): Promise<never> => {
+      await ctx.storage.delete(args.storageId);
+      throw new Error(message);
+    };
+    if (!canOwnerEdit(abstract.status)) {
+      return await discard(
+        "Supporting material can only change while the abstract is editable",
+      );
+    }
+    const fileName = args.fileName.trim().slice(0, 200);
+    if (!fileName || !isAllowedSupportingFile(fileName)) {
+      return await discard("This file type is not accepted");
+    }
+    const metadata = await ctx.db.system.get("_storage", args.storageId);
+    if (!metadata) {
+      throw new Error("Uploaded file was not found");
+    }
+    if (metadata.size > MAX_SUPPORTING_FILE_BYTES) {
+      return await discard(
+        `Files must be smaller than ${MAX_SUPPORTING_FILE_BYTES / 1024 / 1024} MB`,
+      );
+    }
+    const existing = await ctx.db
+      .query("abstractFiles")
+      .withIndex("by_abstractId", (q) => q.eq("abstractId", abstract._id))
+      .take(100);
+    if (
+      existing.filter((file) => file.kind === "supplementary").length >=
+      MAX_SUPPORTING_FILES
+    ) {
+      return await discard(
+        `You can attach at most ${MAX_SUPPORTING_FILES} supporting files`,
+      );
+    }
+    return await ctx.db.insert("abstractFiles", {
+      ownerId: user._id,
+      abstractId: abstract._id,
+      storageId: args.storageId,
+      fileName,
+      kind: "supplementary",
+      contentType: metadata.contentType,
+      size: metadata.size,
+      uploadedAt: Date.now(),
+    });
+  },
+});
+
+export const removeSupportingFile = mutation({
+  args: { fileId: v.id("abstractFiles") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const file = await ctx.db.get("abstractFiles", args.fileId);
+    if (!file || file.ownerId !== user._id) {
+      throw new Error("File not found");
+    }
+    const abstract = await getOwnedAbstractOrThrow(ctx, user._id, file.abstractId);
+    if (!canOwnerEdit(abstract.status)) {
+      throw new Error(
+        "Supporting material can only change while the abstract is editable",
+      );
+    }
+    await ctx.storage.delete(file.storageId);
+    await ctx.db.delete("abstractFiles", file._id);
+    return null;
+  },
+});
+
 export const submitDraft = mutation({
   args: { abstractId: v.id("abstracts") },
   returns: abstractValidator,
@@ -445,6 +557,8 @@ export const submitDraft = mutation({
     const authorList = abstract.authorList ?? [];
     const problems = getAbstractProblems({
       title: abstract.title,
+      studyType: abstract.studyType,
+      studyTypeOther: abstract.studyTypeOther,
       authorList,
       advisor: abstract.advisor ?? "",
       advisorAffiliationId: abstract.advisorAffiliationId,
@@ -572,6 +686,9 @@ export const listForReview = query({
           hasCategory ? q.eq(q.field("category"), category) : true,
           from === undefined ? true : q.gte(q.field("submittedAt"), from),
           to === undefined ? true : q.lt(q.field("submittedAt"), to),
+          args.studyType === undefined
+            ? true
+            : q.eq(q.field("studyType"), args.studyType),
           args.reviewed === undefined
             ? true
             : args.reviewed === "reviewed"
@@ -594,6 +711,8 @@ export const listForReview = query({
             code: abstract.code ?? "",
             title: abstract.title,
             keywords: abstract.keywords,
+            studyType: abstract.studyType,
+            studyTypeOther: abstract.studyTypeOther,
             authorNames: (abstract.authorList ?? [])
               .map((author) => author.name)
               .filter(Boolean),

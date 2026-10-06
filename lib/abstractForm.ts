@@ -1,11 +1,65 @@
+import { ABSTRACT_STUDY_TYPES } from "./formOptions";
 import { ABSTRACT_WORD_LIMIT, countWords } from "./richText";
+
+export type AbstractStudyType = (typeof ABSTRACT_STUDY_TYPES)[number];
+
+export const STUDY_TYPE_LABELS: Record<AbstractStudyType, string> = {
+  experimental: "Experimental study",
+  observational: "Observational study (cohort, case-control, cross-sectional)",
+  in_silico: "In silico (computer-based) study",
+  meta_analysis: "Meta-analysis",
+  systematic_review: "Systematic review",
+  case_report: "Case report / case series",
+  qualitative: "Qualitative study",
+  other: "Other",
+};
+
+export const MAX_STUDY_TYPE_OTHER_LENGTH = 120;
+
+/** "Other" shows what the author typed; otherwise the standard label. */
+export function formatStudyType(
+  studyType: AbstractStudyType | undefined,
+  other?: string,
+): string | undefined {
+  if (!studyType) return undefined;
+  if (studyType === "other") return other?.trim() || STUDY_TYPE_LABELS.other;
+  return STUDY_TYPE_LABELS[studyType];
+}
+
+/** Supporting material uploads. */
+export const MAX_SUPPORTING_FILES = 5;
+export const MAX_SUPPORTING_FILE_BYTES = 20 * 1024 * 1024;
+export const SUPPORTING_FILE_EXTENSIONS = [
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".ppt",
+  ".pptx",
+  ".xls",
+  ".xlsx",
+  ".csv",
+  ".txt",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".zip",
+] as const;
+
+export function isAllowedSupportingFile(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  return SUPPORTING_FILE_EXTENSIONS.some((extension) =>
+    lower.endsWith(extension),
+  );
+}
 
 export const MAX_ABSTRACT_AUTHORS = 20;
 export const MAX_ABSTRACT_KEYWORDS = 10;
 export const MAX_ABSTRACT_TITLE_LENGTH = 300;
 
 export const ABSTRACT_STEPS = [
-  { key: "details", label: "Title & keywords" },
+  { key: "details", label: "Study details" },
   { key: "authors", label: "Authors" },
   { key: "abstract", label: "Abstract" },
   { key: "review", label: "Review & submit" },
@@ -15,6 +69,8 @@ export type AbstractStepKey = (typeof ABSTRACT_STEPS)[number]["key"];
 
 export type AbstractDraftShape<AffiliationId = string> = {
   title: string;
+  studyType?: AbstractStudyType;
+  studyTypeOther?: string;
   authorList: ReadonlyArray<{
     name: string;
     affiliationId?: AffiliationId;
@@ -36,6 +92,14 @@ export function getAbstractProblems<AffiliationId>(
   const problems: AbstractProblem[] = [];
   if (!draft.title.trim()) {
     problems.push({ step: "details", message: "Add a title." });
+  }
+  if (!draft.studyType) {
+    problems.push({ step: "details", message: "Choose the type of study." });
+  } else if (draft.studyType === "other" && !draft.studyTypeOther?.trim()) {
+    problems.push({
+      step: "details",
+      message: "Describe the type of study.",
+    });
   }
   if (draft.keywords.length === 0) {
     problems.push({ step: "details", message: "Add at least one keyword." });

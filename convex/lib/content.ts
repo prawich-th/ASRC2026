@@ -39,11 +39,34 @@ export const announcementTagValidator = v.object({
   tone: announcementTagToneValidator,
 });
 
+export const richDocumentOpValidator = v.object({
+  insert: v.string(),
+  attributes: v.optional(
+    v.object({
+      bold: v.optional(v.boolean()),
+      italic: v.optional(v.boolean()),
+      underline: v.optional(v.boolean()),
+      strike: v.optional(v.boolean()),
+      script: v.optional(v.union(v.literal("sub"), v.literal("super"))),
+      link: v.optional(v.string()),
+      header: v.optional(v.union(v.literal(1), v.literal(2), v.literal(3))),
+      list: v.optional(v.union(v.literal("ordered"), v.literal("bullet"))),
+      blockquote: v.optional(v.boolean()),
+    }),
+  ),
+});
+
 export const announcementFields = {
   title: v.string(),
   slug: v.string(),
   summary: v.string(),
+  /**
+   * Plain-text body, used for email and search. Older announcements hold
+   * Markdown here and have no `bodyRich`.
+   */
   body: v.string(),
+  /** Formatted body (restricted Quill delta ops). */
+  bodyRich: v.optional(v.array(richDocumentOpValidator)),
   tags: v.array(announcementTagValidator),
   status: announcementStatusValidator,
   authorId: v.id("users"),

@@ -16,6 +16,7 @@ import {
 } from "./_generated/server";
 import { resolveAffiliation } from "./lib/affiliation";
 import { requireRole } from "./lib/auth";
+import { buildProfilePatch, profileInputValidator } from "./lib/profileInput";
 import {
   participantCategoryValidator,
   userListFiltersValidator,
@@ -424,5 +425,101 @@ export const removeRole = mutation({
       throw new Error("Could not remove user role");
     }
     return updated;
+  },
+});
+
+/** Lets super admins correct any participant's profile. */
+export const updateProfile = mutation({
+  args: {
+    userId: v.id("users"),
+    profile: profileInputValidator,
+    wantsNotifications: v.optional(v.boolean()),
+  },
+  returns: userValidator,
+  handler: async (ctx, args) => {
+    await requireRole(ctx, ["super_admin"]);
+    const target = await ctx.db.get("users", args.userId);
+    if (!target) {
+      throw new Error("User not found");
+    }
+    await ctx.db.patch("users", target._id, {
+      ...(await buildProfilePatch(ctx, target, args.profile)),
+      ...(args.wantsNotifications !== undefined
+        ? { wantsNotifications: args.wantsNotifications }
+        : {}),
+    });
+    const updated = await ctx.db.get("users", target._id);
+    if (!updated) {
+      throw new Error("Could not update user");
+    }
+    return updated;
+  },
+});
+
+function describeValue(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+/**
+ * Dry run of profile creation: applies the same validation and derivation as
+ * registration to the given user (the caller by default) without saving, and
+ * reports either the error a participant would see or every field that would
+ * change.
+ */
+export const previewProfile = query({
+  args: {
+    userId: v.optional(v.id("users")),
+    profile: profileInputValidator,
+  },
+  returns: v.object({
+    error: v.optional(v.string()),
+    changes: v.array(
+      v.object({
+        field: v.string(),
+        before: v.optional(v.string()),
+        after: v.optional(v.string()),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const admin = await requireRole(ctx, ["super_admin"]);
+    const target = args.userId ? await ctx.db.get("users", args.userId) : admin;
+    if (!target) {
+      throw new Error("User not found");
+    }
+    let patch: Record<string, unknown>;
+    try {
+      patch = await buildProfilePatch(ctx, target, args.profile);
+    } catch (caught) {
+      return {
+        error: caught instanceof Error ? caught.message : String(caught),
+        changes: [],
+      };
+    }
+    const current = target as Record<string, unknown>;
+    return {
+      changes: Object.keys(patch)
+        .sort()
+        .map((field) => ({
+          field,
+          before: describeValue(current[field]),
+          after: describeValue(patch[field]),
+        })),
+    };
+  },
+});
+
+/**
+ * Marks the caller's own profile incomplete so they can walk through the
+ * real registration step again. Existing values are kept.
+ */
+export const restartOwnRegistration = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const admin = await requireRole(ctx, ["super_admin"]);
+    await ctx.db.patch("users", admin._id, { profileComplete: false });
+    return null;
   },
 });

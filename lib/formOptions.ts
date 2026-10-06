@@ -22,6 +22,17 @@ export const PARTICIPANT_CATEGORIES = [
 
 export const MEDICAL_STUDENT_YEARS = ["1", "2", "3", "4", "5", "6"] as const;
 
+export const ABSTRACT_STUDY_TYPES = [
+  "experimental",
+  "observational",
+  "in_silico",
+  "meta_analysis",
+  "systematic_review",
+  "case_report",
+  "qualitative",
+  "other",
+] as const;
+
 export const ABSTRACT_CATEGORIES = ["oral", "poster"] as const;
 
 export const ABSTRACT_STATUSES = [

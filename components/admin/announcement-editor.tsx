@@ -1,21 +1,29 @@
 "use client";
 
+import RichTextEditor from "@/components/abstract-editor/rich-text-editor";
 import Button from "@/components/form/button";
-import "@uiw/react-md-editor/markdown-editor.css";
-import "@uiw/react-markdown-preview/markdown.css";
-import dynamic from "next/dynamic";
+import {
+  RICH_DOCUMENT_FORMATS,
+  RichDocumentOp,
+  sanitizeRichDocument,
+} from "@/lib/richDocument";
 import { FormEvent, useState } from "react";
 import styles from "./admin.module.scss";
 
-const MarkdownEditor = dynamic(() => import("@uiw/react-md-editor"), {
-  ssr: false,
-});
+const TOOLBAR = [
+  [{ header: [2, 3, false] }],
+  ["bold", "italic", "underline", "strike"],
+  [{ script: "sub" }, { script: "super" }],
+  [{ list: "ordered" }, { list: "bullet" }, "blockquote"],
+  ["link"],
+  ["clean"],
+];
 
 export type AnnouncementEditorValue = {
   title: string;
   slug: string;
   summary: string;
-  body: string;
+  bodyRich: RichDocumentOp[];
   tagNames: string;
   authorName: string;
   authorTitle: string;
@@ -39,7 +47,7 @@ export default function AnnouncementEditor({
       title: "",
       slug: "",
       summary: "",
-      body: "",
+      bodyRich: [],
       tagNames: "New, Academics",
       authorName: "",
       authorTitle: "",
@@ -65,7 +73,10 @@ export default function AnnouncementEditor({
       <div className={styles.header}>
         <div>
           <h2>Announcement content</h2>
-          <p>Use the Markdown toolbar and live preview before publishing.</p>
+          <p>
+            Format the body with the toolbar: headings, lists, links, and
+            quotes appear on the site and in the email exactly as shown.
+          </p>
         </div>
       </div>
 
@@ -154,14 +165,16 @@ export default function AnnouncementEditor({
           />
         </label>
         <div className={styles.full}>
-          <label>Markdown body</label>
-          <div className={styles.markdownEditor} data-color-mode="light">
-            <MarkdownEditor
-              value={value.body}
-              height={520}
-              preview="live"
-              visibleDragbar
-              onChange={(nextValue) => update("body", nextValue ?? "")}
+          <label id="announcement-body-label">Body</label>
+          <div className={styles.richEditor}>
+            <RichTextEditor<RichDocumentOp>
+              initialValue={value.bodyRich}
+              labelledBy="announcement-body-label"
+              toolbar={TOOLBAR}
+              formats={RICH_DOCUMENT_FORMATS}
+              sanitize={sanitizeRichDocument}
+              minHeight="26rem"
+              onChange={(ops) => update("bodyRich", ops)}
             />
           </div>
         </div>

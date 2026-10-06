@@ -165,7 +165,7 @@ export default function AbstractViewPage() {
 
           {detail.files.length > 0 ? (
             <section className={styles.card}>
-              <h2>Files from the previous submission system</h2>
+              <h2>Supporting material</h2>
               <ul className={styles.supportingList}>
                 {detail.files.map((file) => (
                   <li key={file._id} className={styles.supportingItem}>

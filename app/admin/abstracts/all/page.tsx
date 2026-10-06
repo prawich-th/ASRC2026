@@ -11,6 +11,8 @@ import {
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { getCategoryLabel } from "@/lib/abstractDisplay";
+import { formatStudyType, STUDY_TYPE_LABELS } from "@/lib/abstractForm";
+import { ABSTRACT_STUDY_TYPES } from "@/lib/formOptions";
 import { usePaginatedQuery } from "convex/react";
 import Link from "next/link";
 import { Suspense, useState } from "react";
@@ -20,6 +22,7 @@ const FILTER_KEYS = [
   "status",
   "category",
   "reviewed",
+  "type",
   "from",
   "to",
   "sort",
@@ -104,6 +107,7 @@ function AbstractDirectory() {
   const status = oneOf(filters.status, STATUS_FILTERS);
   const category = oneOf(filters.category, CATEGORY_FILTERS);
   const reviewed = oneOf(filters.reviewed, REVIEWED_FILTERS);
+  const studyType = oneOf(filters.type, ABSTRACT_STUDY_TYPES);
   const order = oneOf(filters.sort, SORT_OPTIONS) ?? "newest";
   const from = startOfDay(filters.from) !== undefined ? filters.from : "";
   const to = startOfDay(filters.to) !== undefined ? filters.to : "";
@@ -113,6 +117,7 @@ function AbstractDirectory() {
     status,
     category,
     reviewed,
+    studyType,
     submittedFrom: startOfDay(from),
     // The "to" date is inclusive, so the range ends at the next midnight.
     submittedTo: startOfDay(to, 1),
@@ -161,6 +166,15 @@ function AbstractDirectory() {
             key: "reviewed",
             label: REVIEWED_LABELS[reviewed],
             onRemove: () => setFilters({ reviewed: "" }),
+          },
+        ]
+      : []),
+    ...(studyType
+      ? [
+          {
+            key: "type",
+            label: STUDY_TYPE_LABELS[studyType],
+            onRemove: () => setFilters({ type: "" }),
           },
         ]
       : []),
@@ -259,6 +273,21 @@ function AbstractDirectory() {
           </select>
         </label>
         <label>
+          Study type
+          <select
+            className={styles.select}
+            value={studyType ?? ""}
+            onChange={(event) => setFilters({ type: event.target.value })}
+          >
+            <option value="">All study types</option>
+            {ABSTRACT_STUDY_TYPES.map((value) => (
+              <option key={value} value={value}>
+                {STUDY_TYPE_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           Submitted from
           <input
             className={styles.field}
@@ -335,6 +364,14 @@ function AbstractDirectory() {
                       <Link href={`/admin/abstracts/${item.abstract._id}`}>
                         <strong>{item.abstract.title || "Untitled"}</strong>
                       </Link>
+                      {item.abstract.studyType ? (
+                        <span className={styles.cellMeta}>
+                          {formatStudyType(
+                            item.abstract.studyType,
+                            item.abstract.studyTypeOther,
+                          )}
+                        </span>
+                      ) : null}
                       {item.abstract.authorNames.length > 0 ? (
                         <span className={styles.cellMeta}>
                           {item.abstract.authorNames.join(", ")}

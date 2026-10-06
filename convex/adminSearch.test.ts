@@ -4,6 +4,7 @@ import resendTest from "@convex-dev/resend/test";
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -268,5 +269,128 @@ describe("affiliation CSV import", () => {
         affiliations: [{ university: "X", country: "Y" }],
       }),
     ).rejects.toThrow("Unauthorized");
+  });
+});
+
+describe("abstract study type and supporting material", () => {
+  test("'other' needs a description and supporting files are limited to editable drafts", async () => {
+    const { t, ids } = await setup();
+    const owner = t.withIdentity({ subject: ids.resident });
+    const draft = await owner.mutation(api.abstracts.createDraft, {
+      title: "Model of sepsis",
+      studyType: "other",
+      studyTypeOther: "  Quality improvement  ",
+      authorList: [
+        { name: "Rin", affiliationId: ids.affiliation, presenting: true },
+      ],
+      advisor: "Dr A",
+      advisorAffiliationId: ids.affiliation,
+      bodyRich: [{ insert: "Body text\n" }],
+      keywords: ["sepsis"],
+      affiliationDeclared: true,
+    });
+    expect(draft.studyTypeOther).toBe("Quality improvement");
+
+    const storageId = await t.run((ctx) =>
+      ctx.storage.store(new Blob(["data"], { type: "text/csv" })),
+    );
+    await expect(
+      owner.mutation(api.abstracts.addSupportingFile, {
+        abstractId: draft._id,
+        storageId,
+        fileName: "run.exe",
+      }),
+    ).rejects.toThrow("This file type is not accepted");
+
+    const storedCsv = await t.run((ctx) =>
+      ctx.storage.store(new Blob(["a,b"], { type: "text/csv" })),
+    );
+    const fileId = await owner.mutation(api.abstracts.addSupportingFile, {
+      abstractId: draft._id,
+      storageId: storedCsv,
+      fileName: "results.csv",
+    });
+    const detail = await owner.query(api.abstracts.getMineById, {
+      abstractId: draft._id,
+    });
+    expect(detail?.files.map((file) => file.fileName)).toEqual(["results.csv"]);
+
+    await owner.mutation(api.abstracts.submitDraft, { abstractId: draft._id });
+    await expect(
+      owner.mutation(api.abstracts.removeSupportingFile, { fileId }),
+    ).rejects.toThrow("only change while the abstract is editable");
+
+    const academic = t.withIdentity({ subject: ids.academic });
+    const review = await academic.query(api.abstracts.getForReview, {
+      abstractId: draft._id,
+    });
+    expect(review?.files).toHaveLength(1);
+    const filtered = await academic.query(api.abstracts.listForReview, {
+      paginationOpts: page,
+      studyType: "other",
+    });
+    expect(filtered.page.map((item) => item.abstract.title)).toEqual([
+      "Model of sepsis",
+    ]);
+  });
+});
+
+describe("admin profile editing and debugging", () => {
+  const profile = (affiliationId: Id<"affiliations">) => ({
+    prefix: "Dr." as const,
+    firstName: "  Rin ",
+    lastName: "Resident",
+    phone: "+66 1",
+    affiliationId,
+    participantCategory: "Resident" as const,
+    city: "Bangkok",
+  });
+
+  test("super admins edit profiles through the registration rules", async () => {
+    const { ids, admin, academic } = await setup();
+    await expect(
+      academic.mutation(api.adminUsers.updateProfile, {
+        userId: ids.newcomer,
+        profile: profile(ids.affiliation),
+      }),
+    ).rejects.toThrow("Unauthorized");
+
+    const updated = await admin.mutation(api.adminUsers.updateProfile, {
+      userId: ids.newcomer,
+      profile: profile(ids.affiliation),
+      wantsNotifications: true,
+    });
+    expect(updated).toMatchObject({
+      name: "Dr. Rin Resident",
+      firstName: "Rin",
+      institution: "Thammasat University",
+      profileComplete: true,
+      wantsNotifications: true,
+    });
+    expect(updated.searchText).toContain("bangkok");
+  });
+
+  test("the dry run reports errors and changes without saving", async () => {
+    const { t, ids, admin } = await setup();
+    const invalid = await admin.query(api.adminUsers.previewProfile, {
+      userId: ids.newcomer,
+      profile: { ...profile(ids.affiliation), lastName: " " },
+    });
+    expect(invalid.error).toBe(
+      "First name, last name, and phone number are required",
+    );
+
+    const valid = await admin.query(api.adminUsers.previewProfile, {
+      userId: ids.newcomer,
+      profile: profile(ids.affiliation),
+    });
+    expect(valid.error).toBeUndefined();
+    expect(valid.changes).toContainEqual({
+      field: "profileComplete",
+      before: "false",
+      after: "true",
+    });
+    const unchanged = await t.run((ctx) => ctx.db.get("users", ids.newcomer));
+    expect(unchanged?.profileComplete).toBe(false);
   });
 });

@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { affiliationValidator } from "./affiliation";
-import { ABSTRACT_CATEGORIES, ABSTRACT_STATUSES } from "../../lib/formOptions";
+import {
+  ABSTRACT_CATEGORIES,
+  ABSTRACT_STATUSES,
+  ABSTRACT_STUDY_TYPES,
+} from "../../lib/formOptions";
 
 const abstractCategoryLiterals = ABSTRACT_CATEGORIES.map((category) =>
   v.literal(category),
@@ -11,6 +15,17 @@ export const abstractCategoryValidator = v.union(
   ...(abstractCategoryLiterals as [
     (typeof abstractCategoryLiterals)[number],
     ...(typeof abstractCategoryLiterals)[number][],
+  ]),
+);
+
+const abstractStudyTypeLiterals = ABSTRACT_STUDY_TYPES.map((type) =>
+  v.literal(type),
+);
+
+export const abstractStudyTypeValidator = v.union(
+  ...(abstractStudyTypeLiterals as [
+    (typeof abstractStudyTypeLiterals)[number],
+    ...(typeof abstractStudyTypeLiterals)[number][],
   ]),
 );
 
@@ -48,6 +63,9 @@ export const abstractFields = {
   ownerId: v.id("users"),
   code: v.string(),
   title: v.string(),
+  studyType: v.optional(abstractStudyTypeValidator),
+  /** Free-text description when `studyType` is "other". */
+  studyTypeOther: v.optional(v.string()),
   /** Structured author rows; replaces the legacy free-text `authors`. */
   authorList: v.optional(v.array(abstractAuthorValidator)),
   advisor: v.optional(v.string()),
@@ -83,6 +101,8 @@ export const abstractValidator = v.object({
   ownerId: v.id("users"),
   code: v.string(),
   title: v.string(),
+  studyType: v.optional(abstractStudyTypeValidator),
+  studyTypeOther: v.optional(v.string()),
   authorList: v.optional(v.array(abstractAuthorValidator)),
   advisor: v.optional(v.string()),
   advisorAffiliationId: v.optional(v.id("affiliations")),
@@ -168,6 +188,8 @@ export const adminAbstractSummaryValidator = v.object({
     title: v.string(),
     keywords: v.array(v.string()),
     authorNames: v.array(v.string()),
+    studyType: v.optional(abstractStudyTypeValidator),
+    studyTypeOther: v.optional(v.string()),
     category: v.optional(abstractCategoryValidator),
     status: abstractStatusValidator,
     submittedAt: v.optional(v.number()),
@@ -200,5 +222,6 @@ export const abstractListFiltersValidator = v.object({
   submittedFrom: v.optional(v.number()),
   submittedTo: v.optional(v.number()),
   reviewed: v.optional(v.union(v.literal("reviewed"), v.literal("unreviewed"))),
+  studyType: v.optional(abstractStudyTypeValidator),
   order: v.optional(v.union(v.literal("newest"), v.literal("oldest"))),
 });

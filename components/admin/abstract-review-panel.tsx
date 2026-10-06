@@ -1,5 +1,6 @@
 "use client";
 
+import { formatStudyType } from "@/lib/abstractForm";
 import AbstractPreview from "@/components/abstract-editor/abstract-preview";
 import Button from "@/components/form/button";
 import FilePreviewDrawer, { PreviewFile } from "./file-preview-drawer";
@@ -138,6 +139,15 @@ export default function AbstractReviewPanel({
             </dd>
           </div>
           <div>
+            <dt>Study type</dt>
+            <dd>
+              {formatStudyType(
+                detail.abstract.studyType,
+                detail.abstract.studyTypeOther,
+              ) ?? "Not specified"}
+            </dd>
+          </div>
+          <div>
             <dt>Category</dt>
             <dd>{getCategoryLabel(detail.abstract.category)}</dd>
           </div>
@@ -151,7 +161,7 @@ export default function AbstractReviewPanel({
 
       {detail.files.length > 0 ? (
         <section className={`${styles.card} ${styles.stack}`}>
-          <h2>Legacy submission files</h2>
+          <h2>Supporting material</h2>
           <ul className={styles.fileList}>
             {detail.files.map((file) => (
               <li key={file._id}>

@@ -24,7 +24,7 @@ export default function NewAnnouncementPage() {
         title: value.title,
         slug: value.slug,
         summary: value.summary,
-        body: value.body,
+        bodyRich: value.bodyRich,
         tags: parseAnnouncementTags(value.tagNames),
         authorName: value.authorName,
         authorTitle: value.authorTitle,

@@ -4,11 +4,8 @@ import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireAffiliation, userAffiliationPatch } from "./lib/affiliation";
 import { getCurrentUser, getCurrentUserOrNull } from "./lib/auth";
-import {
-  participantCategoryValidator,
-  prefixValidator,
-  userValidator,
-} from "./lib/profile";
+import { buildProfilePatch, profileInputFields } from "./lib/profileInput";
+import { prefixValidator, userValidator } from "./lib/profile";
 
 type StorageMetadata = {
   _id: Id<"_storage">;
@@ -38,66 +35,11 @@ export const me = query({
 });
 
 export const completeProfile = mutation({
-  args: {
-    prefix: prefixValidator,
-    firstName: v.string(),
-    otherName: v.optional(v.string()),
-    lastName: v.string(),
-    suffix: v.optional(v.string()),
-    specialty: v.optional(v.string()),
-    phone: v.string(),
-    affiliationId: v.id("affiliations"),
-    position: v.optional(v.string()),
-    participantCategory: participantCategoryValidator,
-    city: v.optional(v.string()),
-  },
+  args: profileInputFields,
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    const name = buildDisplayName([
-      args.prefix,
-      args.firstName,
-      args.otherName,
-      args.lastName,
-      args.suffix,
-    ]);
-    const normalizedEmail = user.email
-      ? normalizeEmail(user.email)
-      : undefined;
-    const phone = args.phone.trim();
-    if (!args.firstName.trim() || !args.lastName.trim() || !phone) {
-      throw new Error("First name, last name, and phone number are required");
-    }
-    const affiliation = await requireAffiliation(ctx, args.affiliationId);
-
-    await ctx.db.patch("users", user._id, {
-      prefix: args.prefix,
-      firstName: args.firstName.trim(),
-      otherName: args.otherName?.trim() || undefined,
-      lastName: args.lastName.trim(),
-      suffix: args.suffix?.trim() || undefined,
-      specialty: args.specialty?.trim() || undefined,
-      phone,
-      position: args.position?.trim() || undefined,
-      participantCategory: args.participantCategory,
-      city: args.city?.trim() || undefined,
-      name,
-      normalizedEmail,
-      ...userAffiliationPatch(
-        {
-          ...user,
-          name,
-          normalizedEmail,
-          phone,
-          specialty: args.specialty?.trim() || undefined,
-          position: args.position?.trim() || undefined,
-          city: args.city?.trim() || undefined,
-          participantCategory: args.participantCategory,
-        },
-        affiliation,
-      ),
-      profileComplete: true,
-    });
+    await ctx.db.patch("users", user._id, await buildProfilePatch(ctx, user, args));
     return null;
   },
 });
