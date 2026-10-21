@@ -90,7 +90,11 @@ export default function AbstractPreview({
         <p className={`${styles.previewAuthors} ${styles.preserveLines}`}>
           {abstract.authors}
         </p>
-      ) : null}
+      ) : (
+        <p className={`${styles.previewAuthors} ${styles.missing}`}>
+          No authors listed
+        </p>
+      )}
 
       {credits.advisor ? (
         <p className={styles.previewAdvisor}>
@@ -111,7 +115,11 @@ export default function AbstractPreview({
         <p className={`${styles.previewAffiliationsLegacy} ${styles.preserveLines}`}>
           {abstract.affiliation}
         </p>
-      ) : null}
+      ) : (
+        <p className={`${styles.previewAffiliationsLegacy} ${styles.missing}`}>
+          No affiliations listed
+        </p>
+      )}
       {hasPresenter ? (
         <p className={styles.previewFootnote}>
           <sup>*</sup> Presenting author

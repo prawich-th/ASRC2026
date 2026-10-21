@@ -95,6 +95,38 @@
     color: var(--ink-muted);
   }
 
+  li > ul {
+    margin: var(--space-2) 0 0;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    margin: 0 0 var(--space-6);
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  th,
+  td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    border-bottom-color: var(--line-strong);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  address {
+    font-style: normal;
+  }
+
   strong {
     font-weight: 600;
   }

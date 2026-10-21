@@ -53,6 +53,8 @@ export default function Footer() {
           <Link href="/contact">Contact us</Link>
           <Link href="/guidelines">Submission guidelines</Link>
           <Link href="/abstracts/submit">Submit an abstract</Link>
+          <Link href="/privacy">Privacy policy</Link>
+          <Link href="/terms-conditions">Terms and conditions</Link>
         </nav>
       </div>
     </footer>

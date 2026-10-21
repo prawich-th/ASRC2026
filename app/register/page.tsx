@@ -310,10 +310,11 @@ export default function RegisterPage() {
                   required
                   label={
                     <>
-                      I agree to the collection and storage of my personal
-                      information,{" "}
-                      <Link href="/terms-conditions">terms and conditions</Link>
-                      .
+                      I agree to the{" "}
+                      <Link href="/terms-conditions">terms and conditions</Link>{" "}
+                      and the collection and storage of my personal
+                      information as described in the{" "}
+                      <Link href="/privacy">privacy policy</Link>.
                     </>
                   }
                 />
