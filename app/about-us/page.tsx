@@ -2,37 +2,37 @@ import type { Metadata } from "next";
 import StaticPage from "@/components/static-page/static-page";
 
 export const metadata: Metadata = {
-  title: "About Us | ASRC 2026",
+  title: "About Us | ASRC 2027",
   description:
-    "Learn about ASRC, its objectives, and the interdisciplinary vision of ASRC 2026.",
+    "Learn about ASRC, its objectives, and the interdisciplinary vision of ASRC 2027.",
 };
 
 const objectives = [
   {
-    title: "Advance Student Research",
+    title: "Advance student research",
     body: "Encourage students to participate in research and develop projects that contribute to medical and scientific knowledge.",
   },
   {
-    title: "Promote Interdisciplinary Collaboration",
+    title: "Promote interdisciplinary collaboration",
     body: "Provide opportunities for students from different medical, scientific, technological, and healthcare disciplines to exchange ideas and work together.",
   },
   {
-    title: "Develop Academic and Research Skills",
+    title: "Develop academic and research skills",
     body: "Strengthen students’ abilities in scientific writing, research methodology, critical appraisal, data interpretation, and academic presentation.",
   },
   {
-    title: "Encourage Innovation in Healthcare",
+    title: "Encourage innovation in healthcare",
     body: "Support research and innovative ideas that may contribute to improvements in healthcare, medical education, technology, and patient outcomes.",
   },
   {
-    title: "Build a Research Community",
+    title: "Build a research community",
     body: "Create connections between students, faculty members, researchers, and institutions that can lead to future academic and research collaborations.",
   },
 ];
 
 export default function AboutUsPage() {
   return (
-    <StaticPage title="About Us">
+    <StaticPage title="About us" document split>
       <p>
         ASRC is an academic and research initiative of the Chulabhorn
         International College of Medicine (CICM), Thammasat University,
@@ -52,7 +52,7 @@ export default function AboutUsPage() {
         collaboration.
       </p>
 
-      <h2>ASRC Objectives</h2>
+      <h2>ASRC objectives</h2>
       <p>ASRC aims to:</p>
       {objectives.map((objective) => (
         <section key={objective.title}>
@@ -61,7 +61,7 @@ export default function AboutUsPage() {
         </section>
       ))}
 
-      <h2>Theme and Vision of ASRC 2026</h2>
+      <h2>Theme and vision of ASRC 2027</h2>
       <h3>
         Medical Interdisciplinary Advancement: Bridging Knowledge, Innovation,
         and Patient Care
@@ -73,18 +73,18 @@ export default function AboutUsPage() {
         artificial intelligence, behavioral sciences, and many other fields.
       </p>
       <p>
-        The theme of ASRC 2026, “Medical Interdisciplinary Advancement,”
+        The theme of ASRC 2027, “Medical Interdisciplinary Advancement,”
         reflects our vision of bringing these perspectives together to address
         increasingly complex challenges in healthcare.
       </p>
       <p>
         Through research, innovation, and interdisciplinary collaboration, ASRC
-        2026 seeks to encourage students to look beyond traditional academic
+        2027 seeks to encourage students to look beyond traditional academic
         boundaries and explore how different fields can work together to
         advance medical knowledge and improve patient care.
       </p>
 
-      <h2>Interdisciplinary Academic Community</h2>
+      <h2>Interdisciplinary academic community</h2>
       <p>
         ASRC brings together students, educators, researchers, and
         professionals with diverse academic backgrounds, creating an
@@ -92,7 +92,7 @@ export default function AboutUsPage() {
         medical and healthcare challenges.
       </p>
 
-      <h2>Commitment to Innovation and Research</h2>
+      <h2>Commitment to innovation and research</h2>
       <p>
         ASRC encourages participants to explore new ideas, technologies,
         research methods, and approaches that may contribute to the advancement
@@ -105,7 +105,7 @@ export default function AboutUsPage() {
         innovation.
       </p>
 
-      <h2>Networking and Collaboration Opportunities</h2>
+      <h2>Networking and collaboration opportunities</h2>
       <p>
         ASRC is designed not only as a research presentation platform but also
         as an opportunity to connect.

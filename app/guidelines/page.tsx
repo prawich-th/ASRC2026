@@ -2,35 +2,34 @@ import type { Metadata } from "next";
 import StaticPage from "@/components/static-page/static-page";
 
 export const metadata: Metadata = {
-  title: "Submission Guidelines | ASRC 2026",
+  title: "Submission Guidelines | ASRC 2027",
   description:
-    "Official submission, abstract, ethics, review, and presentation guidelines for ASRC 2026.",
+    "Official submission, abstract, ethics, review, and presentation guidelines for ASRC 2027.",
 };
 
 export default function GuidelinesPage() {
   return (
-    <StaticPage title="Submission Guidelines">
-      <h2>General Requirements</h2>
+    <StaticPage title="Submission guidelines" document split>
+      <h2>General requirements</h2>
       <ul>
         <li>
           All submissions must comply with the official ASRC Research and
           Academic Guidelines.
         </li>
         <li>
-          Each student may submit one research project as the primary
-          presenting author.
+          Each student may submit one research project as the corresponding author.
         </li>
         <li>
           Students may participate as co-authors in additional projects where
           permitted by the organizing committee.
         </li>
         <li>
-          Each submitted project must have at least one faculty or academic
-          advisor who has reviewed and approved the work prior to submission.
+          Faculty advisors may be included in the author list and optionally
+          identified using the faculty advisor checkbox.
         </li>
         <li>
           All information submitted must be accurate and approved by the
-          research team and advisor.
+          research team.
         </li>
       </ul>
 
@@ -38,7 +37,6 @@ export default function GuidelinesPage() {
       <p>Submissions must:</p>
       <ul>
         <li>Be completed by eligible students according to ASRC regulations.</li>
-        <li>Include an academic advisor.</li>
         <li>Represent original academic or research work.</li>
         <li>Follow appropriate research ethics and institutional requirements.</li>
         <li>Receive necessary ethical approval where applicable.</li>
@@ -52,7 +50,7 @@ export default function GuidelinesPage() {
         other forms of academic misconduct are strictly prohibited.
       </p>
 
-      <h2>Abstract Submission</h2>
+      <h2>Abstract submission</h2>
       <p>
         Participants must complete the official ASRC Abstract Submission Form
         and provide all required information.
@@ -62,10 +60,10 @@ export default function GuidelinesPage() {
         abstract has been successfully received. The organizing and academic
         committees will review all eligible submissions. Acceptance decisions
         and presentation categories will subsequently be communicated to the
-        presenting author.
+        corresponding author.
       </p>
 
-      <h2>Abstract Format</h2>
+      <h2>Abstract format</h2>
       <h3>Title</h3>
       <p>
         The title should clearly and concisely represent the content of the
@@ -75,8 +73,8 @@ export default function GuidelinesPage() {
       <h3>Authors</h3>
       <p>
         Add each author in publication order with their full name and
-        affiliation. The presenting author and faculty advisor must be clearly
-        identified.
+        affiliation. The uploader is automatically the corresponding author.
+        Faculty advisors can optionally be marked within the author list.
       </p>
 
       <h3>Affiliations</h3>
@@ -87,7 +85,7 @@ export default function GuidelinesPage() {
         committee will verify it.
       </p>
 
-      <h3>Abstract Content</h3>
+      <h3>Abstract content</h3>
       <p>
         The abstract is written directly on the website and must not exceed
         250 words. Italics, bold, underline, and sub/superscript formatting are
@@ -125,7 +123,7 @@ export default function GuidelinesPage() {
       <h3>Keywords</h3>
       <p>Provide relevant keywords describing the research.</p>
 
-      <h2>Submission Requirements</h2>
+      <h2>Submission requirements</h2>
       <p>
         All abstracts are prepared and submitted through the online editor; no
         template or file upload is required. Drafts save automatically and can
@@ -136,7 +134,7 @@ export default function GuidelinesPage() {
         <li>The abstract is no longer than 250 words.</li>
         <li>All required sections are included.</li>
         <li>Every author is listed with the correct affiliation.</li>
-        <li>The submitted version has been reviewed by the academic advisor.</li>
+        <li>The submitted version has been approved by all listed authors.</li>
         <li>
           The research complies with applicable ethical and academic
           regulations.
@@ -147,7 +145,7 @@ export default function GuidelinesPage() {
         for correction or excluded from consideration.
       </p>
 
-      <h2>Research Ethics and Academic Integrity</h2>
+      <h2>Research ethics and academic integrity</h2>
       <p>
         All research presented at ASRC must follow internationally accepted
         principles of research ethics and academic integrity.
@@ -174,7 +172,7 @@ export default function GuidelinesPage() {
         documentation where necessary.
       </p>
 
-      <h2>Review Process</h2>
+      <h2>Review process</h2>
       <p>
         Submitted abstracts will be evaluated by the ASRC Academic Committee
         and appointed reviewers. Submissions may be evaluated based on:
@@ -187,21 +185,21 @@ export default function GuidelinesPage() {
         <li>Originality and innovation</li>
         <li>Potential contribution to healthcare or scientific knowledge</li>
         <li>Clarity of academic communication</li>
-        <li>Alignment with the interdisciplinary vision of ASRC 2026</li>
+        <li>Alignment with the interdisciplinary vision of ASRC 2027</li>
       </ul>
       <p>
         Following the review process, selected participants will be invited to
-        present their research at ASRC 2026.
+        present their research at ASRC 2027.
       </p>
 
-      <h2>Presentation Categories</h2>
-      <h3>Oral Research Presentation</h3>
+      <h2>Presentation categories</h2>
+      <h3>Oral research presentation</h3>
       <p>
         Selected participants will formally present their research to an
         academic audience and panel of judges.
       </p>
 
-      <h3>Poster Presentation</h3>
+      <h3>Poster presentation</h3>
       <p>
         Participants will communicate their research through an academic poster
         and engage directly with reviewers and attendees.
@@ -211,7 +209,7 @@ export default function GuidelinesPage() {
       <p>
         Selected projects demonstrating particularly strong integration
         between medicine and another academic discipline may be featured as
-        part of the ASRC 2026 Interdisciplinary Research Showcase.
+        part of the ASRC 2027 Interdisciplinary Research Showcase.
       </p>
       <p>
         Final presentation categories will be determined by the ASRC Academic

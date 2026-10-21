@@ -21,3 +21,9 @@ Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
 <!-- convex-ai-end -->
+
+## Design system
+The design system lives at https://claude.ai/artifact/EaTKroAmpmvTh818t3wVzp
+Before any UI work, read its project/README.md and project/tokens.json.
+Use its tokens instead of hardcoded colours, sizes, radii or shadows.
+Brand hues (tu-red, green, orange, gray) must not change.

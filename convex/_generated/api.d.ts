@@ -24,6 +24,7 @@ import type * as lib_emailTemplates from "../lib/emailTemplates.js";
 import type * as lib_notification from "../lib/notification.js";
 import type * as lib_preRegistration from "../lib/preRegistration.js";
 import type * as lib_profile from "../lib/profile.js";
+import type * as lib_profileInput from "../lib/profileInput.js";
 import type * as notifications from "../notifications.js";
 import type * as users from "../users.js";
 
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/notification": typeof lib_notification;
   "lib/preRegistration": typeof lib_preRegistration;
   "lib/profile": typeof lib_profile;
+  "lib/profileInput": typeof lib_profileInput;
   notifications: typeof notifications;
   users: typeof users;
 }>;

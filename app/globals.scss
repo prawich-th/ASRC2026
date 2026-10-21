@@ -1,50 +1,118 @@
+@import url("https://pro.boxicons.com/fonts/3.0.8/basic/regular/400/boxicons.min.css?sig=44d0ffd8c35c5df4a4e5d8637b495a3c5e592d2a684120dd5cac3b87db79632b");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Myanmar:wght@400..700&family=Noto+Sans+Thai:wght@400..700&display=swap");
+
+// ASRC design system tokens: https://claude.ai/artifact/EaTKroAmpmvTh818t3wVzp
 :root {
-  --background: #fafafa;
+  // Colour
+  --paper: #fbfaf6;
+  --paper-sunk: #f3f1ea;
+  --surface: #ffffff;
+  --ink: #171717;
+  --ink-muted: #68635c;
+  --line: #e6e1d8;
+  --line-strong: #c9c2b6;
 
-  --off-yellow: #fffcf7;
-  --off-background: #fffbf3;
   --tu-red: #c3003f;
-
-  --orange: #dc7339;
+  --tu-red-deep: #a20e21;
+  --tu-red-tint: #fbe8ee;
   --green: #135642;
+  --green-tint: #dcece6;
+  --orange: #dc7339;
+  --orange-tint: #fbeee5;
+  --orange-deep: #91471e;
   --gray: #bdbec0;
+  --focus: #c3003f;
+
+  // Legacy names, kept so pages not yet migrated pick up the new ground.
+  --background: var(--paper);
+  --off-yellow: var(--paper);
+  --off-background: var(--paper);
+  --foreground: var(--ink);
+
+  // Type
+  --font-sans: var(--font-inter), Inter, "Noto Sans Thai", system-ui,
+    -apple-system, sans-serif;
+  --font-thai: "Noto Sans Thai", var(--font-inter), Inter, system-ui, sans-serif;
+
+  // Spacing
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --content-max: 1120px;
+  --gutter: var(--space-4);
+  // Height of the sticky site header, for anything else that sticks below it.
+  --header-height: 73px;
+
+  @media (min-width: 900px) {
+    --gutter: var(--space-12);
+  }
+
+  // Select and searchable-select chevron, 12px, in ink-muted.
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%2368635c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+
+  // Radius
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+  --radius-round: 50%;
+
+  // Shadow
+  --shadow-float: 0 1px 2px rgba(23, 23, 23, 0.04),
+    0 8px 24px rgba(23, 23, 23, 0.08);
+
+  // Rings
+  --ring-s: 160px;
+  // Resolves against the nearest inline-size container (the link card).
+  --ring-card: clamp(120px, 60cqw, 220px);
+  --ring-m: 448px;
+  --ring-l: 1200px;
+  --ring-stroke-s: 32px;
+  --ring-stroke-m: 48px;
+  --ring-stroke-l: 64px;
 
   //phone screen size
   --phone-screen: 600px;
   --tablet-screen: 900px;
-
-  // font-size: 62.5%; // 1rem = 10px
 
   @media (max-width: 600px) {
     font-size: 90%;
   }
 }
 
-// @media (prefers-color-scheme: dark) {
-//   :root {
-//     --background: #0a0a0a;
-//     --foreground: #ededed;
-//   }
-// }
-
 body {
-  background: var(--background);
+  background: var(--paper);
   margin: 0;
   padding: 0;
-  color: var(--foreground);
-  font-family: "Inter", sans-serif;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
   text-decoration: none;
   color: inherit;
 
-  transition: all 0.15s ease;
+  transition: color 0.15s ease;
 
   &:hover {
     text-decoration: underline;
   }
 }
 
-@import url("https://pro.boxicons.com/fonts/3.0.8/basic/regular/400/boxicons.min.css?sig=44d0ffd8c35c5df4a4e5d8637b495a3c5e592d2a684120dd5cac3b87db79632b");
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+Myanmar:wght@100..900&family=Noto+Sans+Thai:wght@100..900&display=swap");
+// Keyboard focus only: a 2px tu-red ring, offset by 2px of paper.
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}

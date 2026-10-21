@@ -1,6 +1,5 @@
 "use client";
 
-import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { getRoleLabel } from "@/lib/adminRoles";
@@ -217,7 +216,6 @@ export default function DashboardShell({
 
   return (
     <div className={styles.page}>
-      <Header />
       <div className={`${styles.layout} ${collapsed ? styles.collapsed : ""}`}>
         <aside className={styles.sidebar}>
           <button

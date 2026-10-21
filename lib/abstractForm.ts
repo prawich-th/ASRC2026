@@ -117,21 +117,6 @@ export function getAbstractProblems<AffiliationId>(
       message: "Every author needs an affiliation.",
     });
   }
-  if (
-    draft.authorList.length > 0 &&
-    !draft.authorList.some((author) => author.presenting)
-  ) {
-    problems.push({
-      step: "authors",
-      message: "Mark which author will present.",
-    });
-  }
-  if (!draft.advisor.trim() || !draft.advisorAffiliationId) {
-    problems.push({
-      step: "authors",
-      message: "Add the faculty advisor and their affiliation.",
-    });
-  }
 
   const words = countWords(draft.bodyText);
   if (words === 0) {

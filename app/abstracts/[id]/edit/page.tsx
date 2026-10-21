@@ -3,7 +3,6 @@
 import AbstractEditor from "@/components/abstract-editor/abstract-editor";
 import Button from "@/components/form/button";
 import Footer from "@/components/layout/footer";
-import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -40,10 +39,9 @@ export default function EditAbstractPage() {
 
   return (
     <div className={styles.page}>
-      <Header />
       <section className={styles.banner}>
         <div className={styles.bannerInner}>
-          <h1>{isRevision ? "Revise Abstract." : "Edit Abstract."}</h1>
+          <h1>{isRevision ? "Revise abstract" : "Edit abstract"}</h1>
           <p>
             {isRevision
               ? "Address the committee feedback, then resubmit for review."
@@ -63,7 +61,7 @@ export default function EditAbstractPage() {
               <div className={styles.actions}>
                 <Link href="/profile/abstracts">
                   <Button className="primary" type="button">
-                    Back to My Abstracts
+                    Back to my abstracts
                   </Button>
                 </Link>
               </div>

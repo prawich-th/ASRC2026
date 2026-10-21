@@ -3,7 +3,7 @@
 import AnnouncementCard from "@/components/announcements/announcement-card";
 import Button from "@/components/form/button";
 import Footer from "@/components/layout/footer";
-import Header from "@/components/layout/header";
+import Section, { sectionStyles } from "@/components/layout/section";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { usePaginatedQuery } from "convex/react";
@@ -17,22 +17,23 @@ export default function AnnouncementsPage() {
   );
 
   return (
-    <div className={styles.page}>
-      <Header />
-      <section className={styles.banner}>
-        <div className={styles.bannerInner}>
-          <h1>Announcements</h1>
-          <p>Updates from the Annual Student Research Conference.</p>
-        </div>
-      </section>
-      <main className={styles.main}>
-        <div className={styles.inner}>
+    <div className={sectionStyles.page}>
+      <main>
+        <Section innerClassName={styles.head}>
+          <div>
+            <h1>Announcements.</h1>
+            <p className={styles.intro}>
+              Updates from the Annual Student Research Conference.
+            </p>
+          </div>
+        </Section>
+        <Section ring={{ color: "orange", side: "right", level: "high" }}>
           {status === "LoadingFirstPage" ? (
             <LoadingScreen variant="inline" what="announcements" />
           ) : results.length === 0 ? (
-            <div className={styles.state}>
-              No announcements have been published yet.
-            </div>
+            <p className={styles.state}>
+              Announcements about the programme and deadlines will appear here.
+            </p>
           ) : (
             <>
               <div className={styles.grid}>
@@ -46,7 +47,7 @@ export default function AnnouncementsPage() {
               {status === "CanLoadMore" || status === "LoadingMore" ? (
                 <div className={styles.pagination}>
                   <Button
-                    className="green"
+                    className="secondary"
                     type="button"
                     disabled={status === "LoadingMore"}
                     onClick={() => loadMore(12)}
@@ -57,7 +58,7 @@ export default function AnnouncementsPage() {
               ) : null}
             </>
           )}
-        </div>
+        </Section>
       </main>
       <Footer />
     </div>

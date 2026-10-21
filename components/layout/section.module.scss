@@ -1,0 +1,127 @@
+// Public page sections: full-width bands that alternate paper / paper-sunk.
+
+.page {
+  overflow: clip;
+}
+
+// Position decides the ground, so a section that merges away (or renders
+// nothing while loading) never leaves two of the same colour touching.
+.page > main > section {
+  background: var(--paper);
+
+  &:nth-of-type(even) {
+    background: var(--paper-sunk);
+  }
+}
+
+// One tight rhythm: space-12 top and bottom (space-8 on phones), no
+// min-height. The alternating ground does the separating, so padding stays
+// small. A section clips its own ring so nothing crosses into a neighbour.
+.section {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding-block: var(--space-12);
+
+  @media (max-width: 599px) {
+    padding-block: var(--space-8);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+}
+
+.strip {
+  padding-block: var(--space-4);
+
+  @media (max-width: 599px) {
+    padding-block: var(--space-4);
+  }
+}
+
+// The 1120px content column. The section title sits space-6 above its content.
+.inner {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-6);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px))
+    max(var(--gutter), env(safe-area-inset-right, 0px));
+}
+
+// Rings: open circles that bleed off an edge and settle in once.
+.ring {
+  position: absolute;
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  border-style: solid;
+  border-radius: var(--radius-round);
+  pointer-events: none;
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ring-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  &.green {
+    border-color: var(--green);
+  }
+
+  &.orange {
+    border-color: var(--orange);
+  }
+
+  &.gray {
+    border-color: var(--gray);
+  }
+}
+
+@keyframes ring-in {
+  from {
+    opacity: 0;
+    scale: 0.92;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+// Section ring: lives in the side margin outside the content column. Its
+// centre sits on the page edge and it is sized to both margins, so its
+// visible half never reaches the text. Hidden where the margin is too narrow.
+.sectionRing {
+  z-index: 0;
+  top: 50%;
+  width: min(calc(100vw - var(--content-max)), var(--ring-m));
+  border-width: var(--ring-stroke-m);
+
+  &.right {
+    right: 0;
+    translate: 50% -50%;
+  }
+
+  &.left {
+    left: 0;
+    translate: -50% -50%;
+  }
+
+  &.high {
+    top: 15%;
+  }
+
+  &.low {
+    top: 85%;
+  }
+
+  @media (max-width: 1279px) {
+    display: none;
+  }
+}

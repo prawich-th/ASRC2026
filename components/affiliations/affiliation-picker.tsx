@@ -177,7 +177,6 @@ export default function AffiliationPicker({
           open ? styles.controlOpen : ""
         }`}
       >
-        <i className="bx bx-search-alt-2" aria-hidden="true" />
         <input
           id={inputId}
           role="combobox"
@@ -216,7 +215,7 @@ export default function AffiliationPicker({
             <i className="bx bx-x" aria-hidden="true" />
           </button>
         ) : (
-          <i className="bx bx-chevron-down" aria-hidden="true" />
+          <span className={styles.chevron} aria-hidden="true" />
         )}
       </div>
       {selected?.status === "pending" ? (

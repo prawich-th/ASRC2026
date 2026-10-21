@@ -3,27 +3,51 @@
 import Button from "@/components/form/button";
 import styles from "./header.module.scss";
 import Link from "next/link";
-import { useMediaQuery } from "react-responsive";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 
+const NAV_LINKS = [
+  { href: "/academics", label: "Academics" },
+  { href: "/guidelines", label: "Guidelines" },
+  { href: "/about-us", label: "About us" },
+  { href: "/contact", label: "Contact" },
+] as const;
+
 export default function Header() {
-  const isPhone = useMediaQuery({ query: "(max-width: 600px)" });
   const { signOut } = useAuthActions();
   const router = useRouter();
+  const pathname = usePathname();
   const accountRef = useRef<HTMLDivElement>(null);
 
   const user = useQuery(api.users.me);
-  const isMounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
   const [accountOpen, setAccountOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [menuPath, setMenuPath] = useState(pathname);
+
+  // The shared header survives navigation; menus belong to the current page.
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setAccountOpen(false);
+    setMenuOpen(false);
+  }
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 0);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  function closeMenusOnLink(event: React.MouseEvent) {
+    if ((event.target as HTMLElement).closest("a")) {
+      setMenuOpen(false);
+      setAccountOpen(false);
+    }
+  }
 
   useEffect(() => {
     if (!accountOpen) {
@@ -60,131 +84,154 @@ export default function Header() {
     try {
       await signOut();
       setAccountOpen(false);
+      setMenuOpen(false);
       router.replace("/");
     } finally {
       setSigningOut(false);
     }
   }
 
-  function goToProfile() {
-    setAccountOpen(false);
-    router.push("/profile");
-  }
+  const accountLabel = user
+    ? user.firstName
+      ? `${user.prefix ?? ""}${user.firstName.trim()}${user.suffix ? ` ${user.suffix}` : ""}`
+      : user.email
+    : null;
 
-  function goToAdmin() {
-    setAccountOpen(false);
-    router.push("/admin");
-  }
+  const accountItems = user ? (
+    <>
+      {user.role ? (
+        <Link className={styles.menuItem} role="menuitem" href="/admin">
+          Administration
+        </Link>
+      ) : null}
+      <Link className={styles.menuItem} role="menuitem" href="/profile">
+        Profile
+      </Link>
+      <button
+        className={`${styles.menuItem} ${styles.signOut}`}
+        type="button"
+        role="menuitem"
+        disabled={signingOut}
+        onClick={() => {
+          void handleSignOut();
+        }}
+      >
+        {signingOut ? "Signing out…" : "Sign out"}
+      </button>
+    </>
+  ) : null;
 
-  if (!isMounted) {
-    return (
-      <header className={styles.header} style={{ height: "4rem" }}></header>
-    );
+  // Sign-in has its own full-page branding.
+  if (pathname === "/login") {
+    return null;
   }
 
   return (
-    <header className={styles.header}>
-      {isPhone ? (
-        <Link href="/">
-          <div className={styles.phone + " " + styles.left}>
-            <img
-              className={styles.logo}
-              src="/thammasat.png"
-              alt="Thammasat University"
-            />
-            <img className={styles.logo} src="/cicm.png" alt="CICM" />
-            <img className={styles.logo} src="/smo.png" alt="logo" />
-            <img className={styles.logo} src="/asrc.png" alt="logo" />
-          </div>
+    <header
+      className={`${styles.header} ${scrolled || menuOpen ? styles.scrolled : ""}`}
+    >
+      <div className={styles.inner}>
+        <Link href="/" className={styles.logos} aria-label="ASRC 2027 home">
+          <img src="/thammasat.png" alt="Thammasat University" />
+          <img src="/cicm.png" alt="CICM" />
+          <img src="/smo.png" alt="SMO CICM" />
+          <img src="/asrc.png" alt="ASRC" />
         </Link>
-      ) : (
-        <>
-          <Link href="/">
-            <div className={styles.left}>
-              <img
-                className={styles.logo}
-                src="/thammasat.png"
-                alt="Thammasat University"
-              />
-              <img className={styles.logo} src="/cicm.png" alt="CICM" />
-              <img className={styles.logo} src="/smo.png" alt="logo" />
-              <img className={styles.logo} src="/asrc.png" alt="logo" />
-            </div>
-          </Link>
-          <div className={styles.right}>
-            <span>
-              <Link href="/academics">Academics</Link>
-            </span>
-            <span>
-              <Link href="/guidelines">Guidelines</Link>
-            </span>
-            <span>
-              <Link href="/about-us">About Us</Link>
-            </span>
-            <span>
-              <Link href="/contact">Contact</Link>
-            </span>
-            {user ? (
-              <div className={styles.account} ref={accountRef}>
-                <Button
-                  className={"primary"}
-                  type="button"
-                  aria-expanded={accountOpen}
-                  aria-haspopup="menu"
-                  onClick={() => setAccountOpen((open) => !open)}
+
+        <nav className={styles.nav} aria-label="Main">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
+            >
+              {link.label}
+            </Link>
+          ))}
+          {user === undefined ? (
+            <span className={styles.accountPlaceholder} aria-hidden="true" />
+          ) : user ? (
+            <div className={styles.account} ref={accountRef}>
+              <Button
+                className="primary sm"
+                type="button"
+                aria-expanded={accountOpen}
+                aria-haspopup="menu"
+                onClick={() => setAccountOpen((open) => !open)}
+              >
+                {accountLabel}
+              </Button>
+              {accountOpen ? (
+                <div
+                  className={styles.popup}
+                  role="menu"
+                  aria-label="Account"
+                  onClick={closeMenusOnLink}
                 >
-                  {user.firstName
-                    ? `${user.prefix ?? ""}${user.firstName.trim()}${user.suffix ? ` ${user.suffix}` : ""}`
-                    : user.email}
-                </Button>
-                {accountOpen ? (
-                  <div
-                    className={styles.popup}
-                    role="menu"
-                    aria-label="Account"
-                  >
-                    {user.role ? (
-                      <Button
-                        className={"action"}
-                        type="button"
-                        role="menuitem"
-                        disabled={signingOut}
-                        onClick={goToAdmin}
-                      >
-                        Administration
-                      </Button>
-                    ) : null}
-                    <Button
-                      className={"green"}
-                      type="button"
-                      role="menuitem"
-                      disabled={signingOut}
-                      onClick={goToProfile}
-                    >
-                      Profile
-                    </Button>
-                    <Button
-                      className={"destructive"}
-                      type="button"
-                      role="menuitem"
-                      disabled={signingOut}
-                      onClick={() => {
-                        void handleSignOut();
-                      }}
-                    >
-                      {signingOut ? "Signing out…" : "Sign Out"}
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <Link href="/login">
-                <Button className={"primary"}>Login / Register</Button>
+                  {accountItems}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <Link href="/login" className={styles.buttonLink}>
+              <Button className="primary sm" tabIndex={-1}>
+                Log in or register
+              </Button>
+            </Link>
+          )}
+        </nav>
+
+        <button
+          className={styles.menuButton}
+          type="button"
+          aria-expanded={menuOpen}
+          aria-controls="site-menu"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <i
+            className={`bx ${menuOpen ? "bx-x" : "bx-menu"}`}
+            aria-hidden="true"
+          />
+          <span className={styles.visuallyHidden}>
+            {menuOpen ? "Close menu" : "Open menu"}
+          </span>
+        </button>
+      </div>
+
+      {menuOpen ? (
+        <div
+          className={styles.mobileMenu}
+          id="site-menu"
+          onClick={closeMenusOnLink}
+        >
+          <nav aria-label="Main">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                className={styles.menuItem}
+                href={link.href}
+                aria-current={pathname === link.href ? "page" : undefined}
+              >
+                {link.label}
               </Link>
-            )}
+            ))}
+          </nav>
+          <div className={styles.mobileAccount}>
+            {user ? (
+              <>
+                <p className={styles.accountName}>{accountLabel}</p>
+                {accountItems}
+              </>
+            ) : user === null ? (
+              <Link href="/login" className={styles.buttonLink}>
+                <Button className="primary" tabIndex={-1}>
+                  Log in or register
+                </Button>
+              </Link>
+            ) : null}
           </div>
-        </>
-      )}
+        </div>
+      ) : null}
     </header>
   );
 }

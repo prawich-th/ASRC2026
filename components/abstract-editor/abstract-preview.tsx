@@ -14,6 +14,7 @@ export type PreviewAbstract = {
     name: string;
     affiliationId?: Id<"affiliations">;
     presenting: boolean;
+    facultyAdvisor?: boolean;
   }>;
   advisor?: string;
   advisorAffiliationId?: Id<"affiliations">;
@@ -25,15 +26,20 @@ export type PreviewAbstract = {
   affiliation?: string;
 };
 
-/** Shows an abstract the way it will appear in the conference proceedings. */
+/**
+ * Shows an abstract the way it will appear in the conference proceedings: a
+ * white sheet whatever ground it sits on, with left-aligned body text.
+ */
 export default function AbstractPreview({
   abstract,
   affiliations,
   showWordCount = false,
+  correspondingAuthor,
 }: {
   abstract: PreviewAbstract;
   affiliations: ReadonlyArray<Doc<"affiliations">>;
   showWordCount?: boolean;
+  correspondingAuthor?: string;
 }) {
   const hasStructuredAuthors = (abstract.authorList?.length ?? 0) > 0;
   const credits = buildAuthorCredits(
@@ -46,6 +52,9 @@ export default function AbstractPreview({
   const ops = abstract.bodyRich ?? plainTextToRichText(abstract.body);
   const wordCount = countWords(abstract.body);
   const studyType = formatStudyType(abstract.studyType, abstract.studyTypeOther);
+  const hasPresenter =
+    hasStructuredAuthors &&
+    (abstract.authorList ?? []).some((author) => author.presenting);
 
   return (
     <article className={styles.preview}>
@@ -56,16 +65,26 @@ export default function AbstractPreview({
 
       {hasStructuredAuthors ? (
         <p className={styles.previewAuthors}>
-          {credits.authors.map((author, index) => (
-            <Fragment key={index}>
-              {index > 0 ? ", " : null}
-              <span className={author.presenting ? styles.presenting : undefined}>
-                {author.name || "Unnamed author"}
-              </span>
-              {author.number ? <sup>{author.number}</sup> : null}
-              {author.presenting ? <sup>*</sup> : null}
-            </Fragment>
-          ))}
+          {credits.authors.map((author, index) => {
+            const presenting = abstract.authorList?.[index]?.presenting;
+            return (
+              <Fragment key={index}>
+                {index > 0 ? ", " : null}
+                <span className={presenting ? styles.presenting : undefined}>
+                  {author.name || "Unnamed author"}
+                </span>
+                {author.number || presenting ? (
+                  <sup>
+                    {author.number}
+                    {presenting ? "*" : null}
+                  </sup>
+                ) : null}
+                {abstract.authorList?.[index]?.facultyAdvisor
+                  ? " (Faculty advisor)"
+                  : null}
+              </Fragment>
+            );
+          })}
         </p>
       ) : abstract.authors ? (
         <p className={`${styles.previewAuthors} ${styles.preserveLines}`}>
@@ -93,10 +112,13 @@ export default function AbstractPreview({
           {abstract.affiliation}
         </p>
       ) : null}
-      {hasStructuredAuthors ? (
+      {hasPresenter ? (
         <p className={styles.previewFootnote}>
           <sup>*</sup> Presenting author
         </p>
+      ) : null}
+      {correspondingAuthor ? (
+        <p className={styles.previewFootnote}>Corresponding author: {correspondingAuthor}</p>
       ) : null}
 
       {ops.length > 0 ? (

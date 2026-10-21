@@ -4,7 +4,7 @@ import AffiliationPicker from "@/components/affiliations/affiliation-picker";
 import Button from "@/components/form/button";
 import { CheckboxField, FormField, SelectField } from "@/components/form/Form";
 import Footer from "@/components/layout/footer";
-import Header from "@/components/layout/header";
+import Section, { sectionStyles } from "@/components/layout/section";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -178,20 +178,20 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <Header />
-      <div className={styles.banner}>
-        <div className={styles.bannerInner}>
-          <h1>Register.</h1>
-          <p>
-            {step === 1
-              ? "Create your account to join ASRC 2027."
-              : "Tell us about yourself to complete registration."}
-          </p>
-        </div>
-      </div>
-      <main className={styles.main}>
-        <div className={styles.inner}>
+    <div className={sectionStyles.page}>
+      <main>
+        <Section innerClassName={styles.head}>
+          <div>
+            <h1>Register.</h1>
+            <p>
+              {step === 1
+                ? "Create your account to join ASRC 2027."
+                : "Tell us about yourself to complete registration."}
+            </p>
+          </div>
+        </Section>
+        <Section ring={{ color: "green", side: "left", level: "low" }}>
+          <div className={styles.inner}>
           <ol className={styles.steps} aria-label="Registration steps">
             <li className={step === 1 ? styles.active : styles.done}>
               <span>1</span>
@@ -277,7 +277,7 @@ export default function RegisterPage() {
           ) : step === 1 ? (
             <form className={styles.stepOne} onSubmit={handleCreateAccount}>
               <section className={styles.card}>
-                <h2>Account Information</h2>
+                <h2>Account information</h2>
                 <div className={styles.stack}>
                   <FormField
                     label="Email"
@@ -295,7 +295,7 @@ export default function RegisterPage() {
                     required
                   />
                   <FormField
-                    label="Confirm Password"
+                    label="Confirm password"
                     name="confirmPassword"
                     type="password"
                     autoComplete="new-password"
@@ -324,7 +324,7 @@ export default function RegisterPage() {
                 />
                 {error ? <p className={styles.error}>{error}</p> : null}
                 <Button className="primary" type="submit" disabled={submitting}>
-                  {submitting ? "Please wait…" : "Register Now"}
+                  {submitting ? "Please wait…" : "Create account"}
                 </Button>
                 <p className={styles.signIn}>
                   Already have an account? <Link href="/login">Sign in</Link>
@@ -334,7 +334,7 @@ export default function RegisterPage() {
           ) : (
             <form onSubmit={handlePersonalInformation}>
               <section className={styles.card}>
-                <h2>Personal Information</h2>
+                <h2>Personal information</h2>
                 {user?.email ? (
                   <p className={styles.signedInAs}>Signed in as {user.email}</p>
                 ) : null}
@@ -350,20 +350,20 @@ export default function RegisterPage() {
                   />
                   <FormField
                     className={styles.field}
-                    label="First Name"
+                    label="First name"
                     name="firstName"
                     type="text"
                     required
                   />
                   <FormField
                     className={styles.field}
-                    label="Other Name"
+                    label="Other name"
                     name="otherName"
                     type="text"
                   />
                   <FormField
                     className={styles.field}
-                    label="Last Name"
+                    label="Last name"
                     name="lastName"
                     type="text"
                     required
@@ -382,7 +382,7 @@ export default function RegisterPage() {
                   />
                   <FormField
                     className={styles.field}
-                    label="Phone Number"
+                    label="Phone number"
                     name="phone"
                     type="tel"
                     autoComplete="tel"
@@ -390,7 +390,7 @@ export default function RegisterPage() {
                   />
                   <SelectField
                     className={styles.field}
-                    label="Participant Category"
+                    label="Participant category"
                     name="participantCategory"
                     defaultValue=""
                     required
@@ -453,13 +453,14 @@ export default function RegisterPage() {
                     type="submit"
                     disabled={submitting}
                   >
-                    {submitting ? "Please wait…" : "Complete Registration"}
+                    {submitting ? "Please wait…" : "Complete registration"}
                   </Button>
                 </div>
               </section>
             </form>
           )}
-        </div>
+          </div>
+        </Section>
       </main>
       <Footer />
     </div>

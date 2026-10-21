@@ -4,14 +4,14 @@
   display: grid;
   place-items: center;
   box-sizing: border-box;
-  color: #171717;
+  color: var(--ink);
   overflow: hidden;
 }
 
 .page {
   min-height: 100vh;
   width: 100%;
-  background: var(--off-background);
+  background: var(--paper-sunk);
   padding: 2rem;
 }
 
@@ -57,7 +57,7 @@
 .ring {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   border: 0.28rem solid transparent;
   animation: spin 1.15s linear infinite;
 
@@ -81,20 +81,20 @@
 
 .title {
   margin: 0.35rem 0 0;
-  font-size: 2.5rem;
+  font-size: 40px;
   line-height: 1;
   font-weight: 700;
 }
 
 .inline .title {
-  font-size: 1.5rem;
+  font-size: 28px;
 }
 
 .what {
   margin: 0;
-  color: #6b6760;
-  font-weight: 300;
-  font-size: 1.1rem;
+  color: var(--ink-muted);
+  font-weight: 400;
+  font-size: 20px;
   text-transform: capitalize;
 }
 
@@ -104,9 +104,9 @@
   list-style: none;
   display: grid;
   gap: 0.3rem;
-  color: #6b6760;
-  font-weight: 300;
-  font-size: 1rem;
+  color: var(--ink-muted);
+  font-weight: 400;
+  font-size: 16px;
   text-transform: capitalize;
 
   li {
@@ -120,7 +120,7 @@
       top: 0.55em;
       width: 0.4rem;
       height: 0.4rem;
-      border-radius: 50%;
+      border-radius: var(--radius-round);
       background: var(--orange);
     }
 
@@ -147,7 +147,7 @@
 .green,
 .red {
   position: absolute;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   pointer-events: none;
 }
 
@@ -226,7 +226,7 @@
 
 @media (max-width: 600px) {
   .title {
-    font-size: 2rem;
+    font-size: 40px;
   }
 
   .page .logo {

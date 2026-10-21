@@ -4,14 +4,14 @@ import { CONTACTS } from "@/lib/contacts";
 import styles from "./contact.module.scss";
 
 export const metadata: Metadata = {
-  title: "Contact Us | ASRC 2026",
+  title: "Contact Us | ASRC 2027",
   description:
     "Contact the Annual Student Research Conference organizing team at Chulabhorn International College of Medicine.",
 };
 
 export default function ContactPage() {
   return (
-    <StaticPage title="Contact Us">
+    <StaticPage title="Contact us">
       <p>
         Questions about ASRC, abstract submission, or the conference programme
         can be sent to the organizing team using the details below.

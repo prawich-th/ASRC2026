@@ -1,6 +1,5 @@
 "use client";
 
-import AffiliationPicker from "@/components/affiliations/affiliation-picker";
 import Button from "@/components/form/button";
 import { api } from "@/convex/_generated/api";
 import { Doc, Id } from "@/convex/_generated/dataModel";
@@ -68,9 +67,19 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
       studyType: abstract.studyType,
       studyTypeOther: abstract.studyTypeOther ?? "",
       keywords: abstract.keywords,
-      authors: (abstract.authorList ?? []).map((author) => newAuthorRow(author)),
-      advisor: abstract.advisor ?? "",
-      advisorAffiliationId: abstract.advisorAffiliationId,
+      authors: (() => {
+        const authors = (abstract.authorList ?? []).map((author) => newAuthorRow(author));
+        if (abstract.advisor?.trim()) {
+          const existing = authors.find((author) =>
+            author.name.trim().toLocaleLowerCase() === abstract.advisor!.trim().toLocaleLowerCase(),
+          );
+          if (existing) existing.facultyAdvisor = true;
+          else authors.push(newAuthorRow({ name: abstract.advisor, affiliationId: abstract.advisorAffiliationId, facultyAdvisor: true }));
+        }
+        return authors;
+      })(),
+      advisor: "",
+      advisorAffiliationId: undefined,
       bodyOps: abstract.bodyRich ?? plainTextToRichText(abstract.body),
       declared: abstract.affiliationDeclared,
     };
@@ -83,7 +92,7 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
       newAuthorRow({
         name: authorName(me),
         affiliationId: me.affiliationId,
-        presenting: true,
+        presenting: false,
       }),
     ],
     advisor: "",
@@ -98,10 +107,11 @@ function toPayload(form: FormState) {
     studyType: form.studyType,
     studyTypeOther: form.studyType === "other" ? form.studyTypeOther : undefined,
     keywords: form.keywords,
-    authorList: form.authors.map(({ name, affiliationId, presenting }) => ({
+    authorList: form.authors.map(({ name, affiliationId, facultyAdvisor }) => ({
       name,
       affiliationId,
-      presenting,
+      presenting: false,
+      facultyAdvisor,
     })),
     advisor: form.advisor,
     advisorAffiliationId: form.advisorAffiliationId,
@@ -500,7 +510,8 @@ export default function AbstractEditor({
               <h2>Authors</h2>
               <p>
                 List every author in publication order and choose each
-                person&apos;s affiliation. Mark the author who will present.
+                person&apos;s affiliation. You are the corresponding author as the uploader.
+                Optionally mark any author as a faculty advisor.
               </p>
             </header>
             {detail?.abstract.authors && (detail.abstract.authorList?.length ?? 0) === 0 ? (
@@ -515,40 +526,19 @@ export default function AbstractEditor({
               known={known}
               self={{ name: authorName(me), affiliationId: me.affiliationId }}
               showErrors={showErrors("authors")}
-              onChange={(authors) => patch({ authors })}
+              onChange={(authors) => {
+                if (authors.some((author) => !form.authors.some((existing) => existing.key === author.key))) {
+                  setTouched((current) => {
+                    const next = new Set(current);
+                    next.delete("authors");
+                    return next;
+                  });
+                }
+                patch({ authors });
+              }}
             />
 
-            <div className={styles.advisorBlock}>
-              <h3>Faculty advisor</h3>
-              <p>The academic advisor who reviewed and approved this work.</p>
-              <div className={styles.advisorFields}>
-                <label className={styles.field} htmlFor="advisor-name">
-                  <span>Full name</span>
-                  <input
-                    id="advisor-name"
-                    value={form.advisor}
-                    placeholder="e.g. Assoc. Prof. Dr. Somsak Rakdee"
-                    className={
-                      showErrors("authors") && !form.advisor.trim()
-                        ? styles.inputInvalid
-                        : undefined
-                    }
-                    onChange={(event) => patch({ advisor: event.target.value })}
-                  />
-                </label>
-                <div className={styles.field}>
-                  <span className={styles.fieldCaption}>Affiliation</span>
-                  <AffiliationPicker
-                    value={form.advisorAffiliationId}
-                    known={known}
-                    invalid={showErrors("authors") && !form.advisorAffiliationId}
-                    onChange={(advisorAffiliationId) =>
-                      patch({ advisorAffiliationId })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
+
           </>
         ) : null}
 
@@ -619,6 +609,7 @@ export default function AbstractEditor({
               <p>This is how your abstract will appear to the committee.</p>
             </header>
             <AbstractPreview
+              correspondingAuthor={authorName(me) || me.email}
               abstract={{
                 title: form.title,
                 studyType: form.studyType,
@@ -668,9 +659,8 @@ export default function AbstractEditor({
                 onChange={(event) => patch({ declared: event.target.checked })}
               />
               <span>
-                I declare that the listed authors, faculty advisor, affiliations,
-                and abstract are accurate, and that the faculty advisor has
-                reviewed and approved this submission.
+                I declare that the listed authors, affiliations, and abstract are
+                accurate, and that all listed authors have approved this submission.
               </span>
             </label>
 

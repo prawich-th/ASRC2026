@@ -9,7 +9,12 @@ export default function Button({
 }) {
   return (
     <button
-      className={`${styles.button} ${className ? styles[className] : ""}`}
+      className={[
+        styles.button,
+        ...(className?.split(" ") ?? []).map((name) => styles[name]),
+      ]
+        .filter(Boolean)
+        .join(" ")}
       {...options}
     >
       {children}

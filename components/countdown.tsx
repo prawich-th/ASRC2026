@@ -80,13 +80,13 @@ function remainingUntil(nowMs: number) {
   return { months: Math.max(0, months), days };
 }
 
-function DigitPair({ value }: { value: number }) {
+function Tile({ value, label }: { value: number; label: string }) {
   const digits = String(Math.max(0, value)).padStart(2, "0").slice(-2);
 
   return (
-    <div className={styles.number}>
-      <span>{digits[0]}</span>
-      <span>{digits[1]}</span>
+    <div className={styles.countdownUnit}>
+      <span className={styles.countdownNumber}>{digits}</span>
+      <span className={styles.countdownLabel}>{label}</span>
     </div>
   );
 }
@@ -111,14 +111,8 @@ export default function Countdown() {
       aria-label={label}
       suppressHydrationWarning
     >
-      <div className={styles.set}>
-        <DigitPair value={remaining.months} />
-        <div className={styles.text}>Months</div>
-      </div>
-      <div className={styles.set}>
-        <DigitPair value={remaining.days} />
-        <div className={styles.text}>Days</div>
-      </div>
+      <Tile value={remaining.months} label="Months" />
+      <Tile value={remaining.days} label="Days" />
     </div>
   );
 }

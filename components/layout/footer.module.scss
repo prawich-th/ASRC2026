@@ -1,74 +1,113 @@
 .footer {
+  background-color: var(--paper);
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.inner {
+  box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin: 0;
-  padding: 1rem 5rem;
+  gap: var(--space-8);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-12) var(--gutter);
 
-  padding-top: 3rem;
-  background-color: white;
-  box-shadow: 0 0 0.5rem 0 rgba(0, 0, 0, 0.076);
-
-  @media (max-width: 600px) {
-    padding: 1rem 2rem;
+  @media (max-width: 599px) {
     flex-direction: column;
   }
+}
 
-  .logos {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+.left {
+  display: grid;
+  gap: var(--space-6);
+}
 
-    img {
-      height: 4rem;
-    }
+.logos {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+
+  &:hover {
+    text-decoration: none;
   }
 
-  .desc {
-    margin-top: 1rem;
-    h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin: 0;
-    }
+  img {
+    display: block;
+    height: 48px;
+    width: auto;
+  }
+}
 
-    p {
-      margin: 0;
-      font-size: 1rem;
-      font-weight: 400;
-    }
+.desc {
+  h2 {
+    margin: 0 0 var(--space-1);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
   }
 
-  .links {
-    display: flex;
-    flex-flow: column;
-    gap: 0.5rem;
-    margin-top: 1rem;
-
-    h3 {
-      margin: 0rem;
-    }
-
-    span {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-
-      p {
-        margin: 0;
-      }
-    }
+  p {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 14px;
+    line-height: 1.5;
   }
 
-  .right {
-    display: flex;
-    flex-flow: column;
-    gap: 0.5rem;
-    margin-top: 1rem;
+  .motto {
+    margin-bottom: var(--space-1);
+    color: var(--ink);
+    font-weight: 600;
+  }
+}
 
-    p {
-      margin: 0;
-      text-align: right;
-    }
+.contacts {
+  display: grid;
+  gap: var(--space-2);
+  font-size: 14px;
+  line-height: 1.5;
+
+  h3 {
+    margin: 0 0 var(--space-1);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  address {
+    font-style: normal;
+  }
+}
+
+.contact {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+
+  i {
+    flex: none;
+    font-size: 18px;
+    line-height: 21px;
+    color: var(--ink);
+  }
+
+  a:hover {
+    color: var(--tu-red);
+  }
+}
+
+.right {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+  font-size: 14px;
+
+  a:hover {
+    color: var(--tu-red);
+  }
+
+  @media (max-width: 599px) {
+    justify-items: start;
   }
 }

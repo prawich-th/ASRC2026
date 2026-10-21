@@ -11,6 +11,7 @@ export type AuthorRow = {
   name: string;
   affiliationId?: Id<"affiliations">;
   presenting: boolean;
+  facultyAdvisor?: boolean;
 };
 
 export function newAuthorRow(
@@ -39,14 +40,7 @@ export default function AuthorListEditor({
   showErrors: boolean;
 }) {
   function update(key: string, fields: Partial<AuthorRow>) {
-    onChange(
-      rows.map((row) => {
-        if (row.key === key) return { ...row, ...fields };
-        // Only one presenting author.
-        if (fields.presenting) return { ...row, presenting: false };
-        return row;
-      }),
-    );
+    onChange(rows.map((row) => row.key === key ? { ...row, ...fields } : row));
   }
 
   function move(index: number, offset: number) {
@@ -57,11 +51,7 @@ export default function AuthorListEditor({
   }
 
   function remove(key: string) {
-    const next = rows.filter((row) => row.key !== key);
-    if (next.length > 0 && !next.some((row) => row.presenting)) {
-      next[0] = { ...next[0], presenting: true };
-    }
-    onChange(next);
+    onChange(rows.filter((row) => row.key !== key));
   }
 
   function add(fields: Partial<Omit<AuthorRow, "key">> = {}) {
@@ -71,7 +61,6 @@ export default function AuthorListEditor({
       newAuthorRow({
         // Co-authors usually share the previous author's affiliation.
         affiliationId: previous?.affiliationId,
-        presenting: rows.length === 0,
         ...fields,
       }),
     ]);
@@ -120,12 +109,11 @@ export default function AuthorListEditor({
               <div className={styles.authorControls}>
                 <label className={styles.presentingToggle}>
                   <input
-                    type="radio"
-                    name="presenting-author"
-                    checked={row.presenting}
-                    onChange={() => update(row.key, { presenting: true })}
+                    type="checkbox"
+                    checked={row.facultyAdvisor ?? false}
+                    onChange={(event) => update(row.key, { facultyAdvisor: event.target.checked })}
                   />
-                  Presenting
+                  Faculty advisor
                 </label>
                 <div className={styles.iconButtons}>
                   <button

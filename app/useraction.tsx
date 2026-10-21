@@ -4,18 +4,19 @@ import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import Button from "@/components/form/button";
+import styles from "./home.module.scss";
 
 export default function UserAction() {
   const user = useQuery(api.users.me);
+  if (user === undefined) {
+    return null;
+  }
+
   return (
-    <div>
-      {user ? (
-        <Link href="/profile">
-          <Button className={"primary"}>My Profile</Button>
-        </Link>
-      ) : (
-        <Link href="/login">Login</Link>
-      )}
-    </div>
+    <Link href={user ? "/profile" : "/login"} className={styles.buttonLink}>
+      <Button className="secondary" tabIndex={-1}>
+        {user ? "My profile" : "Log in"}
+      </Button>
+    </Link>
   );
 }

@@ -3,7 +3,6 @@
 import AbstractPreview from "@/components/abstract-editor/abstract-preview";
 import Button from "@/components/form/button";
 import Footer from "@/components/layout/footer";
-import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -36,6 +35,7 @@ export default function AbstractViewPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const abstractId = params.id as Id<"abstracts">;
 
+  const me = useQuery(api.users.me);
   const detail = useQuery(api.abstracts.getMineById, { abstractId });
 
   useEffect(() => {
@@ -51,7 +51,6 @@ export default function AbstractViewPage() {
   if (!detail) {
     return (
       <div className={styles.page}>
-        <Header />
         <main className={styles.main}>
           <div className={styles.inner}>
             <section className={styles.card}>
@@ -81,10 +80,12 @@ export default function AbstractViewPage() {
 
   return (
     <div className={styles.page}>
-      <Header />
       <section className={styles.banner}>
         <div className={styles.bannerInner}>
-          <p>My Abstract {"->"}</p>
+          <Link className={styles.eyebrow} href="/profile/abstracts">
+            <i className="bx bx-arrow-left" aria-hidden="true" />
+            My abstracts
+          </Link>
           <h1>{detail.abstract.title}</h1>
         </div>
       </section>
@@ -98,7 +99,7 @@ export default function AbstractViewPage() {
                   <span>{detail.abstract.code}</span>
                 </li>
                 <li>
-                  <strong>Submission Date</strong>
+                  <strong>Submission date</strong>
                   <span>{formatDate(detail.abstract.submittedAt)}</span>
                 </li>
                 <li>
@@ -124,7 +125,7 @@ export default function AbstractViewPage() {
 
           {detail.abstract.submitterFeedback ? (
             <section className={styles.card}>
-              <h2>Committee Feedback</h2>
+              <h2>Committee feedback</h2>
               <p>{detail.abstract.submitterFeedback}</p>
               {detail.abstract.status === "revision_requested" ? (
                 <div className={styles.actions}>
@@ -145,19 +146,20 @@ export default function AbstractViewPage() {
 
           <section className={styles.card}>
             <div className={styles.headerRow}>
-              <h2>Your Abstract</h2>
+              <h2>Your abstract</h2>
               {detail.abstract.status === "draft" ||
               detail.abstract.status === "revision_requested" ? (
                 <Link href={`/abstracts/${detail.abstract._id}/edit`}>
                   <Button className="primary" type="button">
                     {detail.abstract.status === "revision_requested"
-                      ? "Edit Revision"
+                      ? "Edit revision"
                       : "Edit"}
                   </Button>
                 </Link>
               ) : null}
             </div>
             <AbstractPreview
+              correspondingAuthor={[me?.firstName, me?.otherName, me?.lastName].filter(Boolean).join(" ") || me?.name || me?.email}
               abstract={detail.abstract}
               affiliations={detail.affiliations}
             />

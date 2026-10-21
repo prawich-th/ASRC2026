@@ -249,6 +249,7 @@ async function normalizeDraft(ctx: MutationCtx, args: DraftArgs) {
         ? (await requireAffiliation(ctx, author.affiliationId))._id
         : undefined,
       presenting,
+      facultyAdvisor: author.facultyAdvisor ?? false,
     });
   }
 

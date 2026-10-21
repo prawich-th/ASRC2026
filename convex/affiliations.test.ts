@@ -183,7 +183,7 @@ describe("online abstract submission", () => {
     expect(submitted.body).toBe(shortBody);
   });
 
-  test("every author needs an affiliation and one presenter", async () => {
+  test("every author needs an affiliation", async () => {
     const { alice, staff } = await setup();
     const affiliation = await staff.mutation(api.affiliations.create, THAMMASAT);
     const draft = await alice.mutation(api.abstracts.createDraft, {
@@ -196,9 +196,23 @@ describe("online abstract submission", () => {
     await expect(
       alice.mutation(api.abstracts.submitDraft, { abstractId: draft._id }),
     ).rejects.toThrow("Every author needs an affiliation.");
-    await expect(
-      alice.mutation(api.abstracts.submitDraft, { abstractId: draft._id }),
-    ).rejects.toThrow("Mark which author will present.");
+  });
+
+  test("uploader owns submissions without a presenter or advisor and author advisor flags persist", async () => {
+    const { alice, staff, ids } = await setup();
+    const affiliation = await staff.mutation(api.affiliations.create, THAMMASAT);
+    for (const facultyAdvisor of [false, true]) {
+      const draft = await alice.mutation(api.abstracts.createDraft, {
+        ...draftArgs(affiliation._id, "Short body"),
+        advisor: "",
+        advisorAffiliationId: undefined,
+        authorList: [{ name: "Alice", affiliationId: affiliation._id, presenting: false, facultyAdvisor }],
+      });
+      const submitted = await alice.mutation(api.abstracts.submitDraft, { abstractId: draft._id });
+      expect(submitted.status).toBe("submitted");
+      expect(submitted.ownerId).toBe(ids.alice);
+      expect(submitted.authorList?.[0].facultyAdvisor).toBe(facultyAdvisor);
+    }
   });
 
   test("only one presenting author is kept and formatting is preserved", async () => {

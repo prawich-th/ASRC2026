@@ -57,6 +57,7 @@ export const abstractAuthorValidator = v.object({
   name: v.string(),
   affiliationId: v.optional(v.id("affiliations")),
   presenting: v.boolean(),
+  facultyAdvisor: v.optional(v.boolean()),
 });
 
 export const abstractFields = {

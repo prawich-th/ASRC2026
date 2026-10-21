@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import StaticPage from "@/components/static-page/static-page";
 
 export const metadata: Metadata = {
-  title: "Academics | ASRC 2026",
+  title: "Academics | ASRC 2027",
   description:
     "Explore the medical, healthcare, biomedical, and interdisciplinary research areas welcomed by ASRC.",
 };
@@ -27,13 +27,13 @@ const researchAreas = [
 
 export default function AcademicsPage() {
   return (
-    <StaticPage title="Academics">
+    <StaticPage title="Academics" document split>
       <p>
         ASRC welcomes research related to medicine, healthcare, biomedical
         sciences, and interdisciplinary fields.
       </p>
 
-      <h2>Areas of Submission</h2>
+      <h2>Areas of submission</h2>
       <p>Possible areas of submission include:</p>
       <ul>
         {researchAreas.map((area) => (
@@ -41,11 +41,11 @@ export default function AcademicsPage() {
         ))}
       </ul>
 
-      <h2>Interdisciplinary Research</h2>
+      <h2>Interdisciplinary research</h2>
       <p>
         Research that integrates two or more disciplines or demonstrates
         potential applications to healthcare is particularly encouraged under
-        the ASRC 2026 theme.
+        the ASRC 2027 theme.
       </p>
     </StaticPage>
   );

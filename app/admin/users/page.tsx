@@ -578,7 +578,13 @@ function UsersDirectory() {
                           </Link>
                         </strong>
                         {user.email ? (
-                          <a href={`mailto:${user.email}`}>{user.email}</a>
+                          <a
+                            className={styles.email}
+                            href={`mailto:${user.email}`}
+                            title={user.email}
+                          >
+                            {user.email}
+                          </a>
                         ) : (
                           <span>No email address</span>
                         )}
@@ -626,7 +632,7 @@ function UsersDirectory() {
                       </Link>
                     </div>
                     <select
-                      className={styles.select}
+                      className={`${styles.select} ${styles.roleSelect}`}
                       aria-label={`Role for ${user.name || user.email || "user"}`}
                       disabled={savingId === user._id}
                       value={user.role ?? ""}

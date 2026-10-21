@@ -104,12 +104,13 @@ export default function LoginPage() {
       <section className={styles.login}>
         <div className={styles.card}>
           <Link className={styles.back} href="/">
-            {"<- Back Home"}
+            <i className="bx bx-arrow-left" aria-hidden="true" />
+            Back to home
           </Link>
           <div>
             <img className={styles.logo} src="/asrc.png" alt="ASRC 2027" />
           </div>
-          <h1>Sign In.</h1>
+          <h1>Sign in.</h1>
           {verificationEmail ? (
             <form onSubmit={handleVerification}>
               <p>{codeSentMessage}</p>
@@ -125,10 +126,11 @@ export default function LoginPage() {
                 required
               />
               {error ? <p className={styles.error}>{error}</p> : null}
-              <Button disabled={submitting} type="submit">
+              <Button className="primary" disabled={submitting} type="submit">
                 {submitting ? "Please wait…" : "Verify email"}
               </Button>
               <Button
+                className="secondary"
                 disabled={submitting || !pendingPassword}
                 type="button"
                 onClick={() => void resendVerificationCode()}
@@ -154,7 +156,7 @@ export default function LoginPage() {
                 required
               />
               {error ? <p className={styles.error}>{error}</p> : null}
-              <Button disabled={submitting} type="submit">
+              <Button className="primary" disabled={submitting} type="submit">
                 {submitting ? "Please wait…" : "Sign in"}
               </Button>
             </form>
@@ -163,9 +165,9 @@ export default function LoginPage() {
 
         <div className={styles.register}>
           <p>Don&apos;t have an account?</p>{" "}
-          <Link href="/register">
-            <Button type="button" className={"primary"}>
-              Register Now
+          <Link href="/register" className={styles.buttonLink}>
+            <Button type="button" className="secondary" tabIndex={-1}>
+              Create an account
             </Button>
           </Link>
         </div>
@@ -179,13 +181,14 @@ export default function LoginPage() {
         <span className={styles.infoText}>
           <h1>CICM ASRC 2027</h1>
           <p>Annual Student Research Conference</p>
-          <p>Chulabhorn Internaltional College of Medicine</p>
+          <p>Chulabhorn International College of Medicine</p>
         </span>
       </section>
-      <div className={styles.arcs}>
-        <div className={styles.grey}></div>
-        <div className={styles.orange}></div>
-        <div className={styles.red}></div>
+      {/* Back to front: gray, orange, green. */}
+      <div className={styles.rings} aria-hidden="true">
+        <span className={styles.gray} />
+        <span className={styles.orange} />
+        <span className={styles.green} />
       </div>
     </main>
   );

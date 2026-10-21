@@ -5,61 +5,55 @@ import Link from "next/link";
 export default function Footer() {
   return (
     <footer className={styles.footer}>
-      <div className={styles.left}>
-        <Link href="/">
-          <div className={styles.logos}>
+      <div className={styles.inner}>
+        <div className={styles.left}>
+          <Link href="/" className={styles.logos} aria-label="ASRC 2027 home">
             <img src="/thammasat.png" alt="Thammasat University" />
             <img src="/cicm.png" alt="CICM" />
-            <img src="/smo.png" alt="logo" />
-            <img src="/asrc.png" alt="logo" />
+            <img src="/smo.png" alt="SMO CICM" />
+            <img src="/asrc.png" alt="ASRC" />
+          </Link>
+          <div className={styles.desc}>
+            <p className={styles.motto}>Observe. Innovate. Inspire.</p>
+            <h2>Annual Student Research Conference (ASRC)</h2>
+            <p>Chulabhorn International College of Medicine</p>
+            <p>© 2026 Society of Medical Students of CICM</p>
           </div>
-        </Link>
-        <div className={styles.desc}>
-          <p>Observe. Innovate. Inspire.</p>
-          <h2>Annual Student Research Conference (ASRC)</h2>
-          <p>
-            Chulabhorn International College of Medicine <br />
-            2026-27 © Society of Medical Students of CICM
-          </p>
-        </div>
-        <div className={styles.links}>
-          <h3>Any Questions?</h3>
-          {CONTACTS.map((contact) => {
-            const value = contact.lines.map((line, index) => (
-              <span key={line}>
-                {index > 0 ? <br /> : null}
-                {line}
-              </span>
-            ));
+          <div className={styles.contacts}>
+            <h3>Any questions?</h3>
+            {CONTACTS.map((contact) => {
+              const value =
+                contact.lines.length > 1 ? (
+                  <address>
+                    {contact.lines.map((line, index) => (
+                      <span key={line}>
+                        {index > 0 ? <br /> : null}
+                        {line}
+                      </span>
+                    ))}
+                  </address>
+                ) : (
+                  contact.lines[0]
+                );
 
-            return (
-              <span key={contact.label}>
-                <i className={contact.icon} aria-hidden="true" />
-                <p>
+              return (
+                <div key={contact.label} className={styles.contact}>
+                  <i className={contact.icon} aria-hidden="true" />
                   {contact.href ? (
                     <a href={contact.href}>{value}</a>
                   ) : (
-                    value
+                    <span>{value}</span>
                   )}
-                </p>
-              </span>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <div className={styles.right}>
-        <p>
-          <Link href="/contact">Contact Us</Link>
-        </p>
-        <p>
-          <Link href="/terms-conditions">Terms and Conditions</Link>
-        </p>
-        <p>
-          <Link href="/privacy-policy">Privacy Policy</Link>
-        </p>
-        <p>
-          <Link href="/abstracts/submit">Submit an Abstract</Link>
-        </p>
+        <nav className={styles.right} aria-label="Footer">
+          <Link href="/contact">Contact us</Link>
+          <Link href="/guidelines">Submission guidelines</Link>
+          <Link href="/abstracts/submit">Submit an abstract</Link>
+        </nav>
       </div>
     </footer>
   );

@@ -2,7 +2,6 @@
 
 import AbstractEditor from "@/components/abstract-editor/abstract-editor";
 import Footer from "@/components/layout/footer";
-import Header from "@/components/layout/header";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { useConvexAuth, useQuery } from "convex/react";
@@ -27,13 +26,11 @@ export default function SubmitAbstractPage() {
 
   return (
     <div className={styles.page}>
-      <Header />
       <section className={styles.banner}>
         <div className={styles.bannerInner}>
-          <h1>Submit Abstract.</h1>
+          <h1>Submit an abstract</h1>
           <p>
-            Write your abstract here — your draft saves automatically and you
-            can come back to it any time.
+            Write your abstract here — your draft saves automatically.
           </p>
         </div>
       </section>

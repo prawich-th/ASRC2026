@@ -1,7 +1,7 @@
 "use client";
 
 import Footer from "@/components/layout/footer";
-import Header from "@/components/layout/header";
+import Section, { sectionStyles } from "@/components/layout/section";
 import LoadingScreen from "@/components/layout/loading-screen";
 import RichDocumentView from "@/components/rich-document/rich-document-view";
 import { api } from "@/convex/_generated/api";
@@ -28,38 +28,51 @@ export default function AnnouncementDetailPage() {
   const announcement = useQuery(api.announcements.getBySlug, { slug });
 
   return (
-    <div className={styles.page}>
-      <Header />
-      {announcement ? (
-        <section className={styles.banner}>
-          <div className={styles.bannerInner}>
-            <p>Announcements {"->"}</p>
-            <h1>{announcement.title}</h1>
-            <p>{formatDate(announcement.publishedAt)}</p>
-          </div>
-        </section>
-      ) : null}
-      <main className={styles.main}>
-        <div className={styles.inner}>
+    <div className={sectionStyles.page}>
+      <main>
+        {announcement ? (
+          <Section innerClassName={styles.head}>
+            <div>
+              <Link className={styles.eyebrow} href="/announcements">
+                <i className="bx bx-arrow-left" aria-hidden="true" />
+                Announcements
+              </Link>
+              <h1>{announcement.title}</h1>
+              {announcement.publishedAt ? (
+                <p className={styles.intro}>
+                  <time
+                    dateTime={new Date(announcement.publishedAt).toISOString()}
+                  >
+                    {formatDate(announcement.publishedAt)}
+                  </time>
+                </p>
+              ) : null}
+            </div>
+          </Section>
+        ) : null}
+        <Section ring={{ color: "green", side: "left", level: "low" }}>
           {announcement === undefined ? (
             <LoadingScreen variant="inline" what="announcement" />
           ) : announcement === null ? (
-            <div className={styles.state}>
-              <div>
-                <h1>Announcement not found</h1>
-                <p>
-                  This announcement may be unpublished or no longer available.
-                </p>
-                <Link className={styles.back} href="/announcements">
-                  Back to announcements
-                </Link>
-              </div>
+            <div className={styles.notFound}>
+              <h1>Announcement not found</h1>
+              <p>
+                This announcement may be unpublished or no longer available.
+              </p>
+              <Link className={styles.back} href="/announcements">
+                Back to announcements
+              </Link>
             </div>
           ) : (
             <article className={styles.article}>
               <div className={styles.tags}>
                 {announcement.tags.map((tag) => (
-                  <span key={`${tag.name}-${tag.tone}`}>{tag.name}</span>
+                  <span
+                    key={`${tag.name}-${tag.tone}`}
+                    className={styles[tag.tone]}
+                  >
+                    {tag.name}
+                  </span>
                 ))}
               </div>
               {announcement.bodyRich ? (
@@ -84,7 +97,7 @@ export default function AnnouncementDetailPage() {
                     ) : null}
                   </div>
                   <div>
-                    <strong>Responsible Department</strong>
+                    <strong>Responsible department</strong>
                     {announcement.departmentName ? (
                       <p>{announcement.departmentName}</p>
                     ) : null}
@@ -101,7 +114,7 @@ export default function AnnouncementDetailPage() {
               ) : null}
             </article>
           )}
-        </div>
+        </Section>
       </main>
       <Footer />
     </div>

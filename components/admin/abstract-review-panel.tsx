@@ -132,11 +132,8 @@ export default function AbstractReviewPanel({
             <dd>{detail.owner.name || detail.owner.email || "Unknown"}</dd>
           </div>
           <div>
-            <dt>Presenting author</dt>
-            <dd>
-              {detail.abstract.authorList?.find((author) => author.presenting)
-                ?.name ?? "Not specified"}
-            </dd>
+            <dt>Corresponding author</dt>
+            <dd>{detail.owner.name || detail.owner.email || "Unknown"}</dd>
           </div>
           <div>
             <dt>Study type</dt>
@@ -144,7 +141,9 @@ export default function AbstractReviewPanel({
               {formatStudyType(
                 detail.abstract.studyType,
                 detail.abstract.studyTypeOther,
-              ) ?? "Not specified"}
+              ) ?? (
+                <span className={styles.notSpecified}>Not specified</span>
+              )}
             </dd>
           </div>
           <div>
@@ -153,6 +152,7 @@ export default function AbstractReviewPanel({
           </div>
         </dl>
         <AbstractPreview
+          correspondingAuthor={detail.owner.name || detail.owner.email}
           abstract={detail.abstract}
           affiliations={detail.affiliations}
           showWordCount

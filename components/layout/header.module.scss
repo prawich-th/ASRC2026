@@ -1,41 +1,76 @@
 .header {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: var(--paper);
+  border-bottom: 1px solid var(--line);
+  transition: box-shadow 0.15s ease;
+
+  &.scrolled {
+    box-shadow: var(--shadow-float);
+  }
+}
+
+.inner {
+  box-sizing: border-box;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin: 0;
-  padding: 1rem 5rem;
-  background-color: var(--off-yellow);
-  box-shadow: 0 0 1rem 0.25rem rgba(0, 0, 0, 0.141);
-  z-index: 2;
+  gap: var(--space-6);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-3) var(--gutter);
+}
 
-  @media (max-width: 600px) {
-    padding: 1rem 2rem;
-    justify-content: center;
+.logos {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: none;
+
+  &:hover {
+    text-decoration: none;
+  }
+
+  img {
+    display: block;
+    height: 48px;
+    width: auto;
   }
 }
 
-.logo {
-  height: 4rem;
-}
-
-.left {
+.nav {
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
+  gap: var(--space-6);
+  font-size: 15px;
+  font-weight: 500;
 
-.right {
-  flex-grow: 1;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
+  > a {
+    color: var(--ink);
 
-  span {
-    margin-right: 1rem;
+    &:hover,
+    &[aria-current="page"] {
+      color: var(--tu-red);
+      text-decoration: none;
+    }
   }
+
+  @media (max-width: 899px) {
+    display: none;
+  }
+}
+
+.buttonLink {
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+.accountPlaceholder {
+  display: block;
+  width: 120px;
+  height: 36px;
 }
 
 .account {
@@ -44,20 +79,110 @@
 
 .popup {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  top: calc(100% + var(--space-2));
   right: 0;
-  z-index: 3;
   display: grid;
-  gap: 0.5rem;
-  min-width: 12rem;
+  gap: 2px;
+  min-width: 200px;
   box-sizing: border-box;
-  padding: 0.75rem;
-  border-radius: 0.6rem;
-  background: white;
-  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.14);
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
 
-  button {
-    width: 100%;
-    height: auto;
+.menuItem {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  font: 500 15px/1.2 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--paper-sunk);
+    text-decoration: none;
   }
+
+  &[aria-current="page"] {
+    color: var(--tu-red);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+}
+
+.signOut {
+  color: var(--tu-red-deep);
+}
+
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+
+  i {
+    font-size: 24px;
+  }
+
+  @media (max-width: 899px) {
+    display: inline-flex;
+  }
+}
+
+.mobileMenu {
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter) var(--space-4);
+
+  nav {
+    display: grid;
+    gap: 2px;
+  }
+
+  @media (min-width: 900px) {
+    display: none;
+  }
+}
+
+.mobileAccount {
+  display: grid;
+  gap: 2px;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.accountName {
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-3);
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

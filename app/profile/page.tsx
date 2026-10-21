@@ -194,7 +194,7 @@ export default function ProfilePage() {
         </div>
       </div>
       <section className={styles.card}>
-        <h2>Personal Information</h2>
+        <h2>Personal information</h2>
         <form className={styles.profileForm} onSubmit={handleSave}>
           <div className={styles.avatarColumn}>
             {user.image ? (
@@ -217,16 +217,16 @@ export default function ProfilePage() {
             />
             <div className={styles.avatarActions}>
               <Button
-                className="action"
+                className="secondary"
                 type="button"
                 disabled={imageUploading}
                 onClick={() => fileInputRef.current?.click()}
               >
-                {imageUploading ? "Uploading..." : "Upload Photo"}
+                {imageUploading ? "Uploading…" : "Upload photo"}
               </Button>
               {user.profileImageId ? (
                 <Button
-                  className="destructive"
+                  className="dangerText"
                   type="button"
                   disabled={imageUploading}
                   onClick={() => void handleRemoveProfileImage()}
@@ -250,7 +250,7 @@ export default function ProfilePage() {
                 }
               />
               <FormField
-                label="First Name"
+                label="First name"
                 value={formValues.firstName}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -260,7 +260,7 @@ export default function ProfilePage() {
                 }
               />
               <FormField
-                label="Last Name"
+                label="Last name"
                 value={formValues.lastName}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -270,7 +270,7 @@ export default function ProfilePage() {
                 }
               />
               <FormField
-                label="Other Name"
+                label="Other name"
                 value={formValues.otherName}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -302,6 +302,7 @@ export default function ProfilePage() {
                 />
                 {!formValues.affiliationId && user.institution ? (
                   <p className={styles.legacyHint}>
+                    <i className="bx bx-error" aria-hidden="true" />
                     You previously entered “
                     {[user.department, user.institution]
                       .filter(Boolean)

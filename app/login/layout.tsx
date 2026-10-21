@@ -4,7 +4,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f5f2ed",
+  themeColor: "#fbfaf6",
 };
 
 export default function LoginLayout({
