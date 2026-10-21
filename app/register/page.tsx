@@ -163,7 +163,6 @@ export default function RegisterPage() {
         affiliationId,
         position: optionalValue(form, "position"),
         participantCategory: selectedParticipantCategory,
-        city: optionalValue(form, "city"),
       });
       router.replace("/");
     } catch (caught) {
@@ -439,12 +438,6 @@ export default function RegisterPage() {
                       type="text"
                     />
                   )}
-                  <FormField
-                    className={styles.field}
-                    label="City"
-                    name="city"
-                    type="text"
-                  />
                 </div>
                 {error ? <p className={styles.error}>{error}</p> : null}
                 <div className={styles.actions}>

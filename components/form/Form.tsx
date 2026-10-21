@@ -229,7 +229,7 @@ export function FileUploadField({
         <input id={inputId} type="file" {...rest} />
         <div className={styles.uploadPrompt}>
           <span className={styles.uploadIcon}>
-            <i className="bx bx-upload" aria-hidden="true" />
+            <i className="bx bx-arrow-from-bottom" aria-hidden="true" />
           </span>
           <div>
             <strong>
@@ -249,7 +249,7 @@ export function FileUploadField({
             {selectedFiles.map((file) => (
               <li key={`${file.name}-${file.lastModified}`}>
                 <span className={styles.selectedFileIcon}>
-                  <i className="bx bx-file-blank" aria-hidden="true" />
+                  <i className="bx bx-file" aria-hidden="true" />
                 </span>
                 <span className={styles.selectedFileDetails}>
                   <strong title={file.name}>{file.name}</strong>

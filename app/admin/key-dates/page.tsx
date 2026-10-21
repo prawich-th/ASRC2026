@@ -103,7 +103,7 @@ function KeyDateRow({
         {...attributes}
         {...listeners}
       >
-        <i className="bx bx-grid-vertical" aria-hidden="true" />
+        <i className="bx bx-dots-vertical-rounded" aria-hidden="true" />
       </button>
       <span className={`${styles.sortablePosition} ${styles[tone]}`}>
         {position}

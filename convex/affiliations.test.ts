@@ -107,19 +107,32 @@ describe("affiliations", () => {
       phone: "0800000000",
       affiliationId: affiliation._id,
       participantCategory: "Medical Student",
+      city: "Ignored manual city",
     });
     const user = await t.run((ctx) => ctx.db.get("users", ids.alice));
     expect(user?.affiliationId).toBe(affiliation._id);
     expect(user?.institution).toBe("Thammasat University");
     expect(user?.department).toBe("Faculty of Medicine");
+    expect(user?.city).toBe("Pathum Thani");
+    expect(user?.searchText).not.toContain("ignored manual city");
 
     await staff.mutation(api.affiliations.update, {
       affiliationId: affiliation._id,
       ...THAMMASAT,
       university: "Thammasat University (Rangsit)",
+      province: undefined,
     });
     const updated = await t.run((ctx) => ctx.db.get("users", ids.alice));
     expect(updated?.institution).toBe("Thammasat University (Rangsit)");
+    expect(updated?.city).toBe("Khlong Luang");
+
+    await staff.mutation(api.affiliations.update, {
+      affiliationId: affiliation._id,
+      university: THAMMASAT.university,
+      country: THAMMASAT.country,
+    });
+    const withoutLocation = await t.run((ctx) => ctx.db.get("users", ids.alice));
+    expect(withoutLocation?.city).toBeUndefined();
   });
 
   test("merging moves profiles and abstract references to the kept entry", async () => {

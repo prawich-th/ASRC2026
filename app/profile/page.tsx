@@ -10,6 +10,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
+import InvitationLetter from "@/components/profile/invitation-letter";
 import styles from "./profile.module.scss";
 
 const prefixOptions = PREFIXES.map((prefix) => ({
@@ -302,7 +303,7 @@ export default function ProfilePage() {
                 />
                 {!formValues.affiliationId && user.institution ? (
                   <p className={styles.legacyHint}>
-                    <i className="bx bx-error" aria-hidden="true" />
+                    <i className="bx bx-alert-triangle" aria-hidden="true" />
                     You previously entered “
                     {[user.department, user.institution]
                       .filter(Boolean)
@@ -332,6 +333,9 @@ export default function ProfilePage() {
           </div>
         </form>
       </section>
+
+      {/* Letters are not issued yet; pass the uploaded file's URL here. */}
+      <InvitationLetter />
     </div>
   );
 }

@@ -163,7 +163,7 @@ export default function SupportingFiles({
             disabled={full || uploading !== null}
             onClick={() => inputRef.current?.click()}
           >
-            <i className="bx bx-upload" aria-hidden="true" />
+            <i className="bx bx-arrow-from-bottom" aria-hidden="true" />
             {uploading
               ? `Uploading ${uploading}…`
               : full

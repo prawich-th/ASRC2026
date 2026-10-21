@@ -98,7 +98,6 @@ export function toProfileInput(
       position: values.position || undefined,
       participantCategory:
         values.participantCategory as ProfileInputArgs["participantCategory"],
-      city: values.city || undefined,
     },
   };
 }
@@ -230,7 +229,6 @@ export default function ProfileForm({
         ) : (
           text("position", "Position")
         )}
-        {text("city", "City")}
       </div>
       {children}
       <div className={styles.actions}>

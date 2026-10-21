@@ -31,14 +31,14 @@ const LINK_CARDS = [
     title: "Abstract submission",
     icon: "bx-clipboard-detail",
     tone: "green",
-    ring: "ringTopRight",
+    ring: "ringBottom",
   },
   {
     href: "/guidelines",
     title: "Submission guidelines",
     icon: "bx-pen-alt",
     tone: "orange",
-    ring: "ringRight",
+    ring: "ringTop",
   },
   {
     href: "/contact",

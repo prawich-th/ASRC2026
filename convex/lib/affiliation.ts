@@ -76,10 +76,13 @@ export function userAffiliationPatch(
 ) {
   const institution = affiliation.university;
   const department = affiliationUnit(affiliation);
+  const city =
+    affiliation.province?.trim() || affiliation.district?.trim() || undefined;
   return {
     affiliationId: affiliation._id,
     institution,
     department,
+    city,
     searchText: buildUserSearchText({
       name: user.name,
       email: user.normalizedEmail ?? user.email,
@@ -88,7 +91,7 @@ export function userAffiliationPatch(
       department,
       specialty: user.specialty,
       position: user.position,
-      city: user.city,
+      city,
       participantCategory: user.participantCategory,
       affiliation: formatAffiliation(affiliation),
     }),

@@ -13,12 +13,6 @@ export const CONTACTS: ContactItem[] = [
     href: "mailto:smomedcicm+asrc@gmail.com",
   },
   {
-    icon: "bx bx-phone",
-    label: "Phone",
-    lines: ["+66 2 564 1000"],
-    href: "tel:+6625641000",
-  },
-  {
     icon: "bx bx-map",
     label: "Address",
     lines: [

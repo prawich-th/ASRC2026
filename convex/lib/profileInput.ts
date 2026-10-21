@@ -57,7 +57,6 @@ export async function buildProfilePatch(
     phone,
     position: optional(input.position),
     participantCategory: input.participantCategory,
-    city: optional(input.city),
   };
   for (const [key, value] of Object.entries(fields)) {
     if (typeof value === "string" && value.length > MAX_PROFILE_FIELD_LENGTH) {

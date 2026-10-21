@@ -112,7 +112,7 @@ export default function AbstractViewPage() {
             <div className={styles.statusCard}>
               <div className={`${styles.statusHead} ${styles[statusTone]}`}>
                 <span>{statusLabel}</span>
-                <i className="bx bx-search-alt-2" aria-hidden="true" />
+                <i className="bx bx-search" aria-hidden="true" />
               </div>
               <div className={styles.statusBody}>
                 <p>{statusMessage}</p>
@@ -172,7 +172,7 @@ export default function AbstractViewPage() {
                 {detail.files.map((file) => (
                   <li key={file._id} className={styles.supportingItem}>
                     <i
-                      className={`bx bx-file-blank ${styles.icon}`}
+                      className={`bx bx-file ${styles.icon}`}
                       aria-hidden="true"
                     />
                     <div className={styles.content}>

@@ -239,7 +239,14 @@
 
 .dome {
   display: block;
-  height: 540px;
+  // Full size until the title needs the room, then scale down smoothly:
+  // whatever the column has left after ~490px of title, the 32px gap and the
+  // gutters (with headroom for desktop scrollbars) goes to the dome.
+  height: clamp(
+    300px,
+    calc((min(100vw, var(--content-max)) - 628px) * 1.1),
+    540px
+  );
   width: auto;
   pointer-events: none;
   // Hard-edged paper keyline (see #dome-keyline in page.tsx) so the strokes
@@ -248,15 +255,6 @@
 
   @media (prefers-reduced-motion: no-preference) {
     animation: dome-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
-  }
-
-  // Narrower desktops need the width for the 64px title.
-  @media (max-width: 1279px) {
-    height: 460px;
-  }
-
-  @media (max-width: 1099px) {
-    height: 380px;
   }
 
   @media (max-width: 899px) {
@@ -324,7 +322,7 @@
   flex-direction: column;
   justify-content: space-between;
   gap: var(--space-8);
-  min-height: 144px;
+  min-height: 200px;
   box-sizing: border-box;
   padding: var(--space-6);
   border: 1px solid var(--line);
@@ -346,7 +344,8 @@
 
   h3 {
     position: relative;
-    max-width: min(11ch, calc(70cqw - var(--space-6)));
+    // Titles wrap within the card's left 60%, clear of the ring.
+    max-width: min(11ch, calc(60cqw - var(--space-6)));
     margin: 0;
     font-size: 20px;
     font-weight: 600;
@@ -382,25 +381,34 @@
   }
 }
 
-// The card ring's centre sits on the card edge, so a corner shows a quarter
-// and a side shows a half: never more than the card's outer 30%.
+// The card ring is big: it fills the card's outer 40%, never touching the
+// icon or title. Each card in a row comes in from a different direction.
 .linkCardRing {
   z-index: -1;
   width: var(--ring-card);
-  border-width: var(--ring-stroke-s);
+  border-width: var(--ring-stroke-m);
 }
 
-.ringTopRight .linkCardRing {
-  top: calc(var(--ring-card) / -2);
-  right: calc(var(--ring-card) / -2);
+// Rises from below into the lower right; the title moves up under the icon.
+.ringBottom {
+  justify-content: flex-start;
+  gap: var(--space-4);
+
+  .linkCardRing {
+    bottom: calc(var(--ring-card) * -0.61);
+    left: 85%;
+    translate: -50% 0;
+  }
 }
 
-.ringRight .linkCardRing {
-  top: 50%;
-  right: calc(var(--ring-card) / -2);
-  translate: 0 -50%;
+// Hangs down from above into the upper right; the title stays bottom-left.
+.ringTop .linkCardRing {
+  top: calc(var(--ring-card) * -0.54);
+  left: 70%;
+  translate: -50% 0;
 }
 
+// A quarter ring in the bottom-right corner.
 .ringBottomRight .linkCardRing {
   bottom: calc(var(--ring-card) / -2);
   right: calc(var(--ring-card) / -2);

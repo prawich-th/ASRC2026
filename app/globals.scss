@@ -68,8 +68,9 @@
 
   // Rings
   --ring-s: 160px;
-  // Resolves against the nearest inline-size container (the link card).
-  --ring-card: clamp(120px, 60cqw, 220px);
+  // Resolves against the nearest inline-size container (the link card):
+  // 80% of the card's width, 160 to 320px.
+  --ring-card: clamp(160px, 80cqw, 320px);
   --ring-m: 448px;
   --ring-l: 1200px;
   --ring-stroke-s: 32px;
