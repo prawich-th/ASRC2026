@@ -34,3 +34,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Boxicons Pro authentication
+
+The private `@boxicons-pro` dependency requires a Boxicons Pro API key.
+The committed `.npmrc` reads it from `BOXICONS_TOKEN`; never put the key in
+tracked files or use a `NEXT_PUBLIC_` variable for it.
+
+In Vercel, add `BOXICONS_TOKEN` under Project Settings → Environment Variables
+for Production and Preview (and Development if needed), then redeploy.
+Use a valid API key from an account with an active Boxicons Pro subscription.
+
+For local installs, export `BOXICONS_TOKEN` in your shell before running
+`npm install` or `bun install`. npm does not automatically load `.env.local`.
+The previous local registry configuration is preserved in the ignored
+`.npmrc.local` file; it is a backup and is not loaded automatically.
