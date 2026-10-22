@@ -199,8 +199,11 @@
 
 .dome {
   position: absolute;
-  right: var(--space-2);
+  right: 0;
   bottom: 0;
+  // The PNG has 28 of its 1024px transparent on the right; shift that off the
+  // panel so the drawing meets its edge.
+  translate: math.div(28, 1024) * 100% 0;
   // The dome (2:3) takes whatever width the theme column (56px padding,
   // 440px text, 24px gap) leaves in the panel, which is 100vw minus the 520px
   // form panel, so it never runs into the title.
