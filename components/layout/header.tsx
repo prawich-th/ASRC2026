@@ -93,7 +93,9 @@ export default function Header() {
 
   const accountLabel = user
     ? user.firstName
-      ? `${user.prefix ?? ""}${user.firstName.trim()}${user.suffix ? ` ${user.suffix}` : ""}`
+      ? [user.prefix, user.firstName.trim(), user.suffix]
+          .filter(Boolean)
+          .join(" ")
       : user.email
     : null;
 
@@ -122,7 +124,7 @@ export default function Header() {
   ) : null;
 
   // Sign-in has its own full-page branding.
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
     return null;
   }
 

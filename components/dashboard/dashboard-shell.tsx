@@ -189,11 +189,18 @@ export default function DashboardShell({
     });
   }
 
+  // Participants finish registration before using the dashboard; staff
+  // accounts may not have a participant profile.
+  const mustFinishRegistration =
+    !!user && !user.profileComplete && !isStaffRole(user.role);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace("/login");
+    } else if (mustFinishRegistration) {
+      router.replace("/register");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, mustFinishRegistration, router]);
 
   if (isLoading || user === undefined) {
     return <LoadingScreen what="your dashboard" />;
@@ -201,6 +208,10 @@ export default function DashboardShell({
 
   if (!isAuthenticated || !user) {
     return <LoadingScreen what="sign in" />;
+  }
+
+  if (mustFinishRegistration) {
+    return <LoadingScreen what="registration" />;
   }
 
   const role = isStaffRole(user.role) ? user.role : undefined;
