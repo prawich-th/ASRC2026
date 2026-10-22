@@ -107,14 +107,13 @@ describe("affiliations", () => {
       phone: "0800000000",
       affiliationId: affiliation._id,
       participantCategory: "Medical Student",
-      city: "Ignored manual city",
     });
     const user = await t.run((ctx) => ctx.db.get("users", ids.alice));
     expect(user?.affiliationId).toBe(affiliation._id);
     expect(user?.institution).toBe("Thammasat University");
     expect(user?.department).toBe("Faculty of Medicine");
     expect(user?.city).toBe("Pathum Thani");
-    expect(user?.searchText).not.toContain("ignored manual city");
+    expect(user?.customCity).toBeUndefined();
 
     await staff.mutation(api.affiliations.update, {
       affiliationId: affiliation._id,
@@ -135,6 +134,41 @@ describe("affiliations", () => {
     expect(withoutLocation?.city).toBeUndefined();
   });
 
+  test("a typed city overrides the affiliation and survives its updates", async () => {
+    const { t, ids, alice, staff } = await setup();
+    const affiliation = await staff.mutation(api.affiliations.create, THAMMASAT);
+    const profile = {
+      prefix: "Ms." as const,
+      firstName: "Alice",
+      lastName: "Author",
+      phone: "0800000000",
+      affiliationId: affiliation._id,
+      participantCategory: "Medical Student" as const,
+    };
+    await alice.mutation(api.users.completeProfile, {
+      ...profile,
+      city: "  Bangkok ",
+    });
+    const user = await t.run((ctx) => ctx.db.get("users", ids.alice));
+    expect(user?.customCity).toBe("Bangkok");
+    expect(user?.city).toBe("Bangkok");
+    expect(user?.searchText).toContain("bangkok");
+
+    await staff.mutation(api.affiliations.update, {
+      affiliationId: affiliation._id,
+      ...THAMMASAT,
+      university: "Thammasat University (Rangsit)",
+    });
+    const synced = await t.run((ctx) => ctx.db.get("users", ids.alice));
+    expect(synced?.institution).toBe("Thammasat University (Rangsit)");
+    expect(synced?.city).toBe("Bangkok");
+
+    await alice.mutation(api.users.updateProfile, { ...profile, city: " " });
+    const cleared = await t.run((ctx) => ctx.db.get("users", ids.alice));
+    expect(cleared?.customCity).toBeUndefined();
+    expect(cleared?.city).toBe("Pathum Thani");
+  });
+
   test("merging moves profiles and abstract references to the kept entry", async () => {
     const { t, ids, alice, staff } = await setup();
     const duplicate = await alice.mutation(api.affiliations.propose, {
@@ -146,7 +180,9 @@ describe("affiliations", () => {
       prefix: "Ms.",
       firstName: "Alice",
       lastName: "Author",
+      phone: "0800000000",
       affiliationId: duplicate._id,
+      participantCategory: "Medical Student",
     });
     const draft = await alice.mutation(
       api.abstracts.createDraft,

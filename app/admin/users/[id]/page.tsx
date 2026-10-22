@@ -1,27 +1,21 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
-import ProfileForm, {
-  ProfileFormValues,
-  profileValuesFromUser,
-  toProfileInput,
-} from "@/components/admin/profile-form";
+import ProfileForm from "@/components/admin/profile-form";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { getRoleLabel } from "@/lib/adminRoles";
+import { errorMessage } from "@/lib/errorMessage";
+import {
+  ProfileFormValues,
+  profileValuesFromUser,
+  toProfileInput,
+} from "@/lib/profileForm";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-
-function errorMessage(caught: unknown, fallback: string) {
-  if (caught instanceof Error) {
-    const match = caught.message.match(/Uncaught Error: (.*?)(?:\n|$)/);
-    return match?.[1] ?? caught.message;
-  }
-  return fallback;
-}
 
 function formatDate(value?: number) {
   return value

@@ -17,6 +17,7 @@ export const profileInputFields = {
   affiliationId: v.id("affiliations"),
   position: v.optional(v.string()),
   participantCategory: participantCategoryValidator,
+  /** Optional; when blank the city follows the affiliation. */
   city: v.optional(v.string()),
 };
 
@@ -57,6 +58,7 @@ export async function buildProfilePatch(
     phone,
     position: optional(input.position),
     participantCategory: input.participantCategory,
+    customCity: optional(input.city),
   };
   for (const [key, value] of Object.entries(fields)) {
     if (typeof value === "string" && value.length > MAX_PROFILE_FIELD_LENGTH) {

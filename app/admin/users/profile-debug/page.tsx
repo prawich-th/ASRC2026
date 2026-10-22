@@ -1,16 +1,17 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
-import ProfileForm, {
-  EMPTY_PROFILE,
-  ProfileFormValues,
-  profileValuesFromUser,
-  toProfileInput,
-} from "@/components/admin/profile-form";
+import ProfileForm from "@/components/admin/profile-form";
 import Button from "@/components/form/button";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  EMPTY_PROFILE,
+  ProfileFormValues,
+  profileValuesFromUser,
+  toProfileInput,
+} from "@/lib/profileForm";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { FunctionReturnType } from "convex/server";
 import Link from "next/link";

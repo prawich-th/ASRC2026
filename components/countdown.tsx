@@ -116,3 +116,26 @@ export default function Countdown() {
     </div>
   );
 }
+
+/** The countdown as short text ("4m 17d to go"), for tight spaces. */
+export function CountdownText() {
+  const [remaining, setRemaining] = useState(() => remainingUntil(Date.now()));
+
+  useEffect(() => {
+    const tick = () => setRemaining(remainingUntil(Date.now()));
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const parts = [
+    remaining.months > 0 ? `${remaining.months}m` : "",
+    remaining.days > 0 ? `${remaining.days}d` : "",
+  ].filter(Boolean);
+
+  return (
+    <span suppressHydrationWarning>
+      {parts.length > 0 ? `${parts.join(" ")} to go` : "Today"}
+    </span>
+  );
+}
