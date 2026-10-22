@@ -215,7 +215,7 @@
   // Under this height the dome no longer reads as the dome, so drop it rather
   // than show it shrunk. The panel is at least 720px tall, so the width term
   // is what shrinks it; hide at the viewport width where it hits the minimum.
-  $min-height: 420px;
+  $min-height: 540px;
   @media (max-width: #{1040px + math.div($min-height, 1.5) - 1px}) {
     display: none;
   }
