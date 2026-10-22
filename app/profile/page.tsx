@@ -1,7 +1,11 @@
 "use client";
 
 import Button from "@/components/form/button";
-import { CheckboxField, FormField } from "@/components/form/Form";
+import {
+  CheckboxField,
+  FormField,
+  PasswordField,
+} from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
 import InvitationLetter from "@/components/profile/invitation-letter";
 import ProfileFields from "@/components/profile/profile-fields";
@@ -164,8 +168,11 @@ function PersonalInformation({ user }: { user: Doc<"users"> }) {
   }
 
   return (
-    <section className={styles.card}>
-      <h2>Personal information</h2>
+    <section className={styles.card} aria-labelledby="personal-information">
+      <header className={styles.cardHeader}>
+        <h2 id="personal-information">Personal information</h2>
+        <p>Used on your certificate, badge and in the programme.</p>
+      </header>
       <form className={styles.profileForm} onSubmit={handleSave}>
         <div className={styles.avatarColumn}>
           {user.image ? (
@@ -189,7 +196,7 @@ function PersonalInformation({ user }: { user: Doc<"users"> }) {
           />
           <div className={styles.avatarActions}>
             <Button
-              className="secondary"
+              className="secondary sm"
               type="button"
               disabled={imageUploading}
               onClick={() => fileInputRef.current?.click()}
@@ -218,21 +225,17 @@ function PersonalInformation({ user }: { user: Doc<"users"> }) {
               undefined
             }
           />
-          {error ? (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          ) : null}
-          <div className={styles.actions}>
-            {saved && !dirty ? (
-              <p className={styles.success} role="status">
-                <i className="bx bx-check-circle" aria-hidden="true" />
-                Saved
-              </p>
-            ) : null}
+        </div>
+        <footer className={styles.cardFooter}>
+          <PanelStatus
+            error={error}
+            success={saved && !dirty ? "Saved" : ""}
+            pending={dirty ? "You have unsaved changes." : ""}
+          />
+          <div className={styles.footerActions}>
             {dirty ? (
               <Button
-                className="text"
+                className="secondary"
                 type="button"
                 disabled={saving}
                 onClick={discard}
@@ -244,7 +247,7 @@ function PersonalInformation({ user }: { user: Doc<"users"> }) {
               {saving ? "Saving…" : "Save"}
             </Button>
           </div>
-        </div>
+        </footer>
       </form>
     </section>
   );
@@ -270,23 +273,26 @@ function EmailPreferences({ user }: { user: Doc<"users"> }) {
   }
 
   return (
-    <section className={styles.card}>
-      <h2>Email preferences</h2>
-      <div className={styles.stack}>
-        <CheckboxField
-          id="wants-notifications"
-          label="Send me conference announcements and updates by email."
-          hint="Emails about your account and your abstracts are always sent."
-          checked={user.wantsNotifications ?? false}
-          disabled={saving}
-          onChange={(event) => void toggle(event.target.checked)}
-        />
-        {error ? (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        ) : null}
-      </div>
+    <section className={styles.card} aria-labelledby="email-preferences">
+      <header className={styles.cardHeader}>
+        <h2 id="email-preferences">Email preferences</h2>
+        <p>
+          Emails about your account and your abstracts are always sent. Changes
+          save straight away.
+        </p>
+      </header>
+      <CheckboxField
+        id="wants-notifications"
+        label="Send me conference announcements and updates by email."
+        checked={user.wantsNotifications ?? false}
+        disabled={saving}
+        onChange={(event) => void toggle(event.target.checked)}
+      />
+      {error ? (
+        <footer className={styles.cardFooter}>
+          <PanelStatus error={error} />
+        </footer>
+      ) : null}
     </section>
   );
 }
@@ -326,67 +332,103 @@ function AccountSecurity({ email }: { email?: string }) {
   }
 
   return (
-    <section className={styles.card}>
-      <h2>Account security</h2>
-      <form className={styles.securityForm} onSubmit={handleSubmit}>
-        <FormField
-          id="account-email"
-          label="Email"
-          type="email"
-          value={email ?? ""}
-          hint="Contact the organisers to change the email on your account."
-          readOnly
-          disabled
-        />
-        <FormField
-          id="current-password"
-          label="Current password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={currentPassword}
-          onChange={(event) => setCurrentPassword(event.target.value)}
-        />
-        <FormField
-          id="new-password"
-          label="New password"
-          type="password"
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          hint={`At least ${MIN_PASSWORD_LENGTH} characters. Other devices will be signed out.`}
-          required
-          value={newPassword}
-          onChange={(event) => setNewPassword(event.target.value)}
-        />
-        <FormField
-          id="confirm-new-password"
-          label="Confirm new password"
-          type="password"
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-          value={confirmPassword}
-          errorMessage={mismatch ? "Passwords do not match." : undefined}
-          aria-invalid={mismatch}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-        />
-        {error ? (
-          <p className={`${styles.error} ${styles.fullRow}`} role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className={`${styles.actions} ${styles.fullRow}`}>
-          {saved ? (
-            <p className={styles.success} role="status">
-              <i className="bx bx-check-circle" aria-hidden="true" />
-              Password changed
-            </p>
-          ) : null}
-          <Button className="green" type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Change password"}
-          </Button>
+    <section className={styles.card} aria-labelledby="account-security">
+      <header className={styles.cardHeader}>
+        <h2 id="account-security">Account security</h2>
+        <p>Change the password you use to sign in.</p>
+      </header>
+      <form onSubmit={handleSubmit}>
+        <div className={styles.securityFields}>
+          <FormField
+            id="account-email"
+            label="Email"
+            type="email"
+            value={email ?? ""}
+            hint="Contact the organisers to change the email on your account."
+            readOnly
+            disabled
+          />
+          <PasswordField
+            id="current-password"
+            label="Current password"
+            autoComplete="current-password"
+            required
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+          />
+          <PasswordField
+            id="new-password"
+            label="New password"
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            hint={`At least ${MIN_PASSWORD_LENGTH} characters. Other devices will be signed out.`}
+            required
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+          />
+          <PasswordField
+            id="confirm-new-password"
+            label="Confirm new password"
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            required
+            value={confirmPassword}
+            errorMessage={mismatch ? "Passwords do not match." : undefined}
+            aria-invalid={mismatch}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+          />
         </div>
+        <footer className={styles.cardFooter}>
+          <PanelStatus
+            error={error}
+            success={saved ? "Password changed" : ""}
+          />
+          <div className={styles.footerActions}>
+            <Button className="green" type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Change password"}
+            </Button>
+          </div>
+        </footer>
       </form>
     </section>
+  );
+}
+
+/** The left side of a panel footer: an error, a confirmation or a reminder. */
+function PanelStatus({
+  error,
+  success,
+  pending,
+}: {
+  error?: string;
+  success?: string;
+  pending?: string;
+}) {
+  if (error) {
+    return (
+      <p
+        className={`${styles.panelStatus} ${styles.panelStatusError}`}
+        role="alert"
+      >
+        <i className="bx bx-alert-circle" aria-hidden="true" />
+        {error}
+      </p>
+    );
+  }
+  if (success) {
+    return (
+      <p
+        className={`${styles.panelStatus} ${styles.panelStatusSuccess}`}
+        role="status"
+      >
+        <i className="bx bx-check-circle" aria-hidden="true" />
+        {success}
+      </p>
+    );
+  }
+  return (
+    <p className={styles.panelStatus} role="status">
+      {pending}
+    </p>
   );
 }

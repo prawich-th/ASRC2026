@@ -1,7 +1,7 @@
 "use client";
 
 import Button from "@/components/form/button";
-import { FormField } from "@/components/form/Form";
+import { FormField, PasswordField } from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { errorMessage } from "@/lib/errorMessage";
@@ -94,15 +94,15 @@ export default function ResetPasswordPage() {
   return (
     <AuthShell
       title="Reset password."
-      footer={
-        <div className={styles.register}>
-          <p>Remembered it?</p>
-          <Link href="/login" className={styles.buttonLink}>
-            <Button type="button" className="secondary" tabIndex={-1}>
-              Back to sign in
-            </Button>
-          </Link>
-        </div>
+      intro={
+        codeSent
+          ? "Enter the code from your email and choose a new password."
+          : "Enter the email you registered with and we'll send you a code to choose a new password."
+      }
+      topLink={
+        <>
+          Remembered it? <Link href="/login">Sign in</Link>
+        </>
       }
     >
       {codeSent ? (
@@ -125,10 +125,9 @@ export default function ResetPasswordPage() {
             hint="The code expires after 15 minutes."
             required
           />
-          <FormField
+          <PasswordField
             label="New password"
             name="newPassword"
-            type="password"
             autoComplete="new-password"
             minLength={MIN_PASSWORD_LENGTH}
             hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
@@ -136,10 +135,9 @@ export default function ResetPasswordPage() {
             onChange={(event) => setNewPassword(event.target.value)}
             required
           />
-          <FormField
+          <PasswordField
             label="Confirm new password"
             name="confirmPassword"
-            type="password"
             autoComplete="new-password"
             minLength={MIN_PASSWORD_LENGTH}
             value={confirmPassword}
@@ -166,27 +164,29 @@ export default function ResetPasswordPage() {
           </Button>
         </form>
       ) : (
-        <form onSubmit={handleRequest}>
-          <p className={styles.intro}>
-            Enter the email you registered with and we&apos;ll send you a code
-            to choose a new password.
+        <>
+          <form onSubmit={handleRequest}>
+            <FormField
+              label="Email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+            />
+            {error ? (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            ) : null}
+            <Button className="primary" disabled={submitting} type="submit">
+              {submitting ? "Please wait…" : "Send reset code"}
+            </Button>
+          </form>
+          <p className={styles.switchLine}>
+            Remembered it? <Link href="/login">Sign in</Link>
           </p>
-          <FormField
-            label="Email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-          />
-          {error ? (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button className="primary" disabled={submitting} type="submit">
-            {submitting ? "Please wait…" : "Send reset code"}
-          </Button>
-        </form>
+        </>
       )}
     </AuthShell>
   );

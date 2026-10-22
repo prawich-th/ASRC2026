@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type {
   InputHTMLAttributes,
   ReactNode,
@@ -101,6 +104,58 @@ export function FormField({
       <div className={styles.inputRow}>
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
         <input id={inputId} type={type} {...rest} />
+      </div>
+    </FieldShell>
+  );
+}
+
+/** A password input with a show/hide button inside its right edge. */
+export function PasswordField({
+  label,
+  errorMessage,
+  hint,
+  compact,
+  className,
+  id,
+  ...rest
+}: Omit<FormFieldProps, "type" | "prefix">) {
+  const [visible, setVisible] = useState(false);
+  const inputId = id ?? (typeof label === "string" ? label : undefined);
+  return (
+    <FieldShell
+      label={label}
+      errorMessage={errorMessage}
+      hint={hint}
+      compact={compact}
+      className={className}
+      id={inputId}
+    >
+      <div className={styles.passwordRow}>
+        <input id={inputId} type={visible ? "text" : "password"} {...rest} />
+        <button
+          type="button"
+          className={styles.reveal}
+          aria-label={visible ? "Hide password" : "Show password"}
+          aria-pressed={visible}
+          aria-controls={inputId}
+          onClick={() => setVisible((current) => !current)}
+        >
+          <svg
+            aria-hidden="true"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+            <circle cx="12" cy="12" r="3" />
+            {visible ? <path d="M4 4l16 16" /> : null}
+          </svg>
+        </button>
       </div>
     </FieldShell>
   );

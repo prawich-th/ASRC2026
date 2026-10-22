@@ -8,7 +8,7 @@ import styles from "./login.module.scss";
 import Link from "next/link";
 import Button from "@/components/form/button";
 import { api } from "@/convex/_generated/api";
-import { FormField } from "@/components/form/Form";
+import { FormField, PasswordField } from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { errorMessage } from "@/lib/errorMessage";
 import AuthShell from "./auth-shell";
@@ -98,20 +98,21 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Sign in."
-      footer={
-        <div className={styles.register}>
-          <p>Don&apos;t have an account?</p>{" "}
-          <Link href="/register" className={styles.buttonLink}>
-            <Button type="button" className="secondary" tabIndex={-1}>
-              Create an account
-            </Button>
-          </Link>
-        </div>
+      intro="Welcome back. Sign in to submit and track your abstracts and keep your profile up to date."
+      topLink={
+        <>
+          New here? <Link href="/register">Create an account</Link>
+        </>
       }
     >
       {verificationEmail ? (
         <form onSubmit={handleVerification}>
-          <p>{codeSentMessage}</p>
+          {codeSentMessage ? (
+            <p className={styles.notice} aria-live="polite">
+              <i className="bx bx-check-circle" aria-hidden="true" />
+              {codeSentMessage}
+            </p>
+          ) : null}
           <FormField
             label="Verification code"
             name="code"
@@ -121,6 +122,7 @@ export default function LoginPage() {
             minLength={8}
             maxLength={8}
             pattern="[0-9]{8}"
+            hint={`Enter the 8-digit code sent to ${verificationEmail}.`}
             required
           />
           {error ? (
@@ -141,34 +143,43 @@ export default function LoginPage() {
           </Button>
         </form>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <FormField
-            label="Email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-          />
-          <FormField
-            label="Password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            minLength={8}
-            required
-          />
-          <Link className={styles.forgot} href="/login/reset">
-            Forgot password?
+        <>
+          <form onSubmit={handleSubmit}>
+            <FormField
+              label="Email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+            />
+            <PasswordField
+              label="Password"
+              name="password"
+              autoComplete="current-password"
+              minLength={8}
+              required
+            />
+            <Link className={styles.forgot} href="/login/reset">
+              Forgot password?
+            </Link>
+            {error ? (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            ) : null}
+            <Button className="primary" disabled={submitting} type="submit">
+              {submitting ? "Please wait…" : "Sign in"}
+            </Button>
+          </form>
+          <p className={styles.divider}>First time at ASRC 2027?</p>
+          <Link className={styles.secondaryLink} href="/register">
+            Create an account
           </Link>
-          {error ? (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button className="primary" disabled={submitting} type="submit">
-            {submitting ? "Please wait…" : "Sign in"}
-          </Button>
-        </form>
+          <p className={styles.switchLine}>
+            First time here? <Link href="/register">Create an account</Link>
+          </p>
+        </>
       )}
     </AuthShell>
   );
