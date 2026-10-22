@@ -151,46 +151,41 @@ export default async function Home() {
 
         <HomeKeyDatesSection />
 
+        {/* The dean's welcome message waits in ./welcome-message until it
+            is approved; swap it back in for this section then. */}
         <Section
           ring={{ color: "green", side: "left", level: "low" }}
           innerClassName={styles.welcome}
         >
           <h2>
-            Welcome
+            Call for
             <br />
-            message.
+            abstracts.
           </h2>
           <div className={styles.welcomeBody}>
-            <p>Dear Students, Faculty Members, Researchers, and Guests,</p>
+            <h3>Share Your Research at ASRC 2027</h3>
             <p>
-              On behalf of the Chulabhorn International College of Medicine,
-              Thammasat University, we are delighted to welcome you to ASRC
-              2027. Research plays an essential role in the advancement of
-              medicine. However, some of the most significant developments in
-              healthcare emerge when knowledge from different disciplines comes
-              together.
-            </p>
-            <p>
-              Under this year&apos;s theme, “Medical Interdisciplinary
-              Advancement: Bridging Knowledge, Innovation, and Patient Care,”
-              ASRC 2027 invites students to explore research beyond conventional
-              boundaries and consider how medicine can interact with science,
-              technology, engineering, public health, behavioural sciences, and
-              other disciplines.
+              ASRC 2027 is now accepting abstracts from student researchers in
+              basic science, clinical medicine, public health, medical
+              education, evidence synthesis, and medical innovation. Selected
+              abstracts will be presented as oral or poster presentations,
+              judged by an academic panel.
             </p>
             <p>
-              Through research presentations, academic discussions, and
-              opportunities for collaboration, we hope ASRC will serve as a
-              platform where young researchers can share their ideas, learn from
-              one another, and develop the skills necessary to contribute
-              meaningfully to the future of healthcare. We look forward to
-              welcoming you to ASRC 2027 and celebrating the curiosity,
-              creativity, and research achievements of our academic community.
+              <strong>Submissions close 31 January 2027.</strong>
             </p>
-            <p className={styles.signoff}>
-              <strong>Assistant Professor Peerapong Kitipawong, M.D.</strong>
-              <span>Dean, Chulabhorn International College of Medicine</span>
-            </p>
+            <div className={styles.heroActions}>
+              <Link href="/guidelines" className={styles.buttonLink}>
+                <Button className="secondary" tabIndex={-1}>
+                  Read the guidelines
+                </Button>
+              </Link>
+              <Link href="/abstracts/submit" className={styles.buttonLink}>
+                <Button className="primary" tabIndex={-1}>
+                  Submit an abstract
+                </Button>
+              </Link>
+            </div>
           </div>
         </Section>
 
