@@ -1,3 +1,5 @@
+@use "sass:math";
+
 // Sign in and password reset: the conference panel (paper-sunk, rings, dome)
 // beside the form panel (paper). Under 900px the conference panel becomes a
 // short band above the form.
@@ -197,8 +199,11 @@
 
 .dome {
   position: absolute;
-  right: var(--space-2);
+  right: 0;
   bottom: 0;
+  // The PNG has 28 of its 1024px transparent on the right; shift that off the
+  // panel so the drawing meets its edge.
+  translate: math.div(28, 1024) * 100% 0;
   // The dome (2:3) takes whatever width the theme column (56px padding,
   // 440px text, 24px gap) leaves in the panel, which is 100vw minus the 520px
   // form panel, so it never runs into the title.
@@ -210,8 +215,11 @@
     animation: dome-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
   }
 
-  // Too small to read as the dome below this; drop it.
-  @media (max-width: 1239px) {
+  // Under this height the dome no longer reads as the dome, so drop it rather
+  // than show it shrunk. The panel is at least 720px tall, so the width term
+  // is what shrinks it; hide at the viewport width where it hits the minimum.
+  $min-height: 540px;
+  @media (max-width: #{1040px + math.div($min-height, 1.5) - 1px}) {
     display: none;
   }
 }
