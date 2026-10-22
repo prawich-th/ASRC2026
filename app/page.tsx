@@ -35,7 +35,7 @@ const LINK_CARDS = [
   },
   {
     href: "/guidelines",
-    title: "Submission guidelines",
+    title: "Academic guidelines",
     icon: "bx-pen-alt",
     tone: "orange",
     ring: "ringTop",

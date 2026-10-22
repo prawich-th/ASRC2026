@@ -62,7 +62,7 @@ export default function PrivacyPage() {
           upload a profile photo.
         </li>
         <li>
-          <strong>Abstract submissions:</strong> title, study type, author list
+          <strong>Abstract submissions:</strong> title, research category, author list
           (names, affiliations, presenting author, faculty advisor), advisor
           details, abstract text, keywords, declarations you confirm, and any
           supporting files you upload (up to 5 files, 20 MB each).

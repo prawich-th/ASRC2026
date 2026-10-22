@@ -37,7 +37,7 @@ export default function TermsPage() {
         under 18, you need your parent&rsquo;s or guardian&rsquo;s consent to
         create an account. Eligibility to submit or present is set by the ASRC
         regulations and the{" "}
-        <Link href="/guidelines">Submission Guidelines</Link>.
+        <Link href="/guidelines">Academic Guidelines</Link>.
       </p>
 
       <h2>2. Your account</h2>
@@ -91,7 +91,7 @@ export default function TermsPage() {
       </ul>
       <p>
         Submissions must follow the{" "}
-        <Link href="/guidelines">Submission Guidelines</Link>. You can edit or
+        <Link href="/guidelines">Academic Guidelines</Link>. You can edit or
         delete a draft until you submit it. After submission, changes can only
         be made if the committee requests a revision.
       </p>

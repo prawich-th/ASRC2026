@@ -1,6 +1,9 @@
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { buildAuthorCredits } from "@/lib/abstractDisplay";
-import { AbstractStudyType, formatStudyType } from "@/lib/abstractForm";
+import {
+  AbstractResearchCategory,
+  formatResearchCategory,
+} from "@/lib/abstractForm";
 import { countWords, plainTextToRichText, RichTextOp } from "@/lib/richText";
 import { Fragment } from "react";
 import styles from "./abstract-editor.module.scss";
@@ -8,8 +11,8 @@ import RichTextView from "./rich-text-view";
 
 export type PreviewAbstract = {
   title: string;
-  studyType?: AbstractStudyType;
-  studyTypeOther?: string;
+  researchCategory?: AbstractResearchCategory;
+  researchCategoryOther?: string;
   authorList?: ReadonlyArray<{
     name: string;
     affiliationId?: Id<"affiliations">;
@@ -51,14 +54,19 @@ export default function AbstractPreview({
   );
   const ops = abstract.bodyRich ?? plainTextToRichText(abstract.body);
   const wordCount = countWords(abstract.body);
-  const studyType = formatStudyType(abstract.studyType, abstract.studyTypeOther);
+  const researchCategory = formatResearchCategory(
+    abstract.researchCategory,
+    abstract.researchCategoryOther,
+  );
   const hasPresenter =
     hasStructuredAuthors &&
     (abstract.authorList ?? []).some((author) => author.presenting);
 
   return (
     <article className={styles.preview}>
-      {studyType ? <p className={styles.previewStudyType}>{studyType}</p> : null}
+      {researchCategory ? (
+        <p className={styles.previewResearchCategory}>{researchCategory}</p>
+      ) : null}
       <h3 className={styles.previewTitle}>
         {abstract.title || <span className={styles.missing}>Untitled abstract</span>}
       </h3>
