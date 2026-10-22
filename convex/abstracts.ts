@@ -4,10 +4,10 @@ import {
 } from "convex/server";
 import { Infer, v } from "convex/values";
 import {
-  formatStudyType,
+  formatResearchCategory,
   getAbstractProblems,
   isAllowedSupportingFile,
-  MAX_STUDY_TYPE_OTHER_LENGTH,
+  MAX_RESEARCH_CATEGORY_OTHER_LENGTH,
   MAX_SUPPORTING_FILE_BYTES,
   MAX_SUPPORTING_FILES,
   MAX_ABSTRACT_AUTHORS,
@@ -38,7 +38,7 @@ import {
   abstractCategoryValidator,
   abstractDetailValidator,
   abstractListFiltersValidator,
-  abstractStudyTypeValidator,
+  abstractResearchCategoryValidator,
   abstractSummaryValidator,
   abstractValidator,
   adminAbstractDetailValidator,
@@ -112,7 +112,10 @@ async function refreshSearchText(
   const searchText = [
     abstract.code,
     abstract.title,
-    formatStudyType(abstract.studyType, abstract.studyTypeOther),
+    formatResearchCategory(
+      abstract.researchCategory,
+      abstract.researchCategoryOther,
+    ),
     ...abstract.keywords,
     ...(abstract.authorList ?? []).map((author) => author.name),
     abstract.advisor,
@@ -138,8 +141,8 @@ function toOwnerAbstract(abstract: Doc<"abstracts">) {
     ownerId: abstract.ownerId,
     code: abstract.code ?? "",
     title: abstract.title,
-    studyType: abstract.studyType,
-    studyTypeOther: abstract.studyTypeOther,
+    researchCategory: abstract.researchCategory,
+    researchCategoryOther: abstract.researchCategoryOther,
     authorList: abstract.authorList,
     advisor: abstract.advisor,
     advisorAffiliationId: abstract.advisorAffiliationId,
@@ -197,8 +200,8 @@ async function withAffiliations(
 
 const draftValidator = v.object({
   title: v.string(),
-  studyType: v.optional(abstractStudyTypeValidator),
-  studyTypeOther: v.optional(v.string()),
+  researchCategory: v.optional(abstractResearchCategoryValidator),
+  researchCategoryOther: v.optional(v.string()),
   authorList: v.array(abstractAuthorValidator),
   advisor: v.string(),
   advisorAffiliationId: v.optional(v.id("affiliations")),
@@ -217,14 +220,17 @@ async function normalizeDraft(ctx: MutationCtx, args: DraftArgs) {
     );
   }
 
-  const studyType = args.studyType;
-  const studyTypeOther =
-    studyType === "other"
-      ? args.studyTypeOther?.replace(/\s+/g, " ").trim() || undefined
+  const researchCategory = args.researchCategory;
+  const researchCategoryOther =
+    researchCategory === "other"
+      ? args.researchCategoryOther?.replace(/\s+/g, " ").trim() ||
+        undefined
       : undefined;
-  if ((studyTypeOther?.length ?? 0) > MAX_STUDY_TYPE_OTHER_LENGTH) {
+  if (
+    (researchCategoryOther?.length ?? 0) > MAX_RESEARCH_CATEGORY_OTHER_LENGTH
+  ) {
     throw new Error(
-      `The study type must be at most ${MAX_STUDY_TYPE_OTHER_LENGTH} characters`,
+      `The research category must be at most ${MAX_RESEARCH_CATEGORY_OTHER_LENGTH} characters`,
     );
   }
 
@@ -282,8 +288,8 @@ async function normalizeDraft(ctx: MutationCtx, args: DraftArgs) {
 
   return {
     title,
-    studyType,
-    studyTypeOther,
+    researchCategory,
+    researchCategoryOther,
     authorList,
     advisor,
     advisorAffiliationId,
@@ -558,8 +564,8 @@ export const submitDraft = mutation({
     const authorList = abstract.authorList ?? [];
     const problems = getAbstractProblems({
       title: abstract.title,
-      studyType: abstract.studyType,
-      studyTypeOther: abstract.studyTypeOther,
+      researchCategory: abstract.researchCategory,
+      researchCategoryOther: abstract.researchCategoryOther,
       authorList,
       advisor: abstract.advisor ?? "",
       advisorAffiliationId: abstract.advisorAffiliationId,
@@ -687,9 +693,9 @@ export const listForReview = query({
           hasCategory ? q.eq(q.field("category"), category) : true,
           from === undefined ? true : q.gte(q.field("submittedAt"), from),
           to === undefined ? true : q.lt(q.field("submittedAt"), to),
-          args.studyType === undefined
+          args.researchCategory === undefined
             ? true
-            : q.eq(q.field("studyType"), args.studyType),
+            : q.eq(q.field("researchCategory"), args.researchCategory),
           args.reviewed === undefined
             ? true
             : args.reviewed === "reviewed"
@@ -712,8 +718,8 @@ export const listForReview = query({
             code: abstract.code ?? "",
             title: abstract.title,
             keywords: abstract.keywords,
-            studyType: abstract.studyType,
-            studyTypeOther: abstract.studyTypeOther,
+            researchCategory: abstract.researchCategory,
+            researchCategoryOther: abstract.researchCategoryOther,
             authorNames: (abstract.authorList ?? [])
               .map((author) => author.name)
               .filter(Boolean),

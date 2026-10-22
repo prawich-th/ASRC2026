@@ -234,7 +234,7 @@ describe("tiered administration", () => {
     });
     const draft = await participant.mutation(api.abstracts.createDraft, {
       title: "Transactional Receipt Study",
-      studyType: "observational",
+      researchCategory: "public_health",
       authorList: [{ name: "Arun Researcher", affiliationId, presenting: true }],
       advisor: "Dr Faculty Advisor",
       advisorAffiliationId: affiliationId,
@@ -333,7 +333,7 @@ describe("tiered administration", () => {
     await participant.mutation(api.abstracts.updateDraft, {
       abstractId,
       title: "Revision Study",
-      studyType: "observational",
+      researchCategory: "public_health",
       authorList: [{ name: "Arun Researcher", affiliationId, presenting: true }],
       advisor: "Dr Faculty Advisor",
       advisorAffiliationId: affiliationId,

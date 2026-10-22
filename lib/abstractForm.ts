@@ -1,29 +1,31 @@
-import { ABSTRACT_STUDY_TYPES } from "./formOptions";
+import { ABSTRACT_RESEARCH_CATEGORIES } from "./formOptions";
 import { ABSTRACT_WORD_LIMIT, countWords } from "./richText";
 
-export type AbstractStudyType = (typeof ABSTRACT_STUDY_TYPES)[number];
+export type AbstractResearchCategory =
+  (typeof ABSTRACT_RESEARCH_CATEGORIES)[number];
 
-export const STUDY_TYPE_LABELS: Record<AbstractStudyType, string> = {
-  experimental: "Experimental study",
-  observational: "Observational study (cohort, case-control, cross-sectional)",
-  in_silico: "In silico (computer-based) study",
-  meta_analysis: "Meta-analysis",
-  systematic_review: "Systematic review",
-  case_report: "Case report / case series",
-  qualitative: "Qualitative study",
+export const RESEARCH_CATEGORY_LABELS: Record<AbstractResearchCategory, string> = {
+  basic_biomedical: "Basic Medical and Biomedical Sciences",
+  clinical_translational: "Clinical and Translational Research",
+  public_health: "Public Health and Epidemiology",
+  medical_education: "Medical Education and Health Professions Education",
+  evidence_synthesis: "Systematic Reviews and Evidence Synthesis",
+  innovation_technology: "Medical Innovation and Emerging Technologies",
   other: "Other",
 };
 
-export const MAX_STUDY_TYPE_OTHER_LENGTH = 120;
+export const MAX_RESEARCH_CATEGORY_OTHER_LENGTH = 120;
 
 /** "Other" shows what the author typed; otherwise the standard label. */
-export function formatStudyType(
-  studyType: AbstractStudyType | undefined,
+export function formatResearchCategory(
+  researchCategory: AbstractResearchCategory | undefined,
   other?: string,
 ): string | undefined {
-  if (!studyType) return undefined;
-  if (studyType === "other") return other?.trim() || STUDY_TYPE_LABELS.other;
-  return STUDY_TYPE_LABELS[studyType];
+  if (!researchCategory) return undefined;
+  if (researchCategory === "other") {
+    return other?.trim() || RESEARCH_CATEGORY_LABELS.other;
+  }
+  return RESEARCH_CATEGORY_LABELS[researchCategory];
 }
 
 /** Supporting material uploads. */
@@ -69,8 +71,8 @@ export type AbstractStepKey = (typeof ABSTRACT_STEPS)[number]["key"];
 
 export type AbstractDraftShape<AffiliationId = string> = {
   title: string;
-  studyType?: AbstractStudyType;
-  studyTypeOther?: string;
+  researchCategory?: AbstractResearchCategory;
+  researchCategoryOther?: string;
   authorList: ReadonlyArray<{
     name: string;
     affiliationId?: AffiliationId;
@@ -93,12 +95,12 @@ export function getAbstractProblems<AffiliationId>(
   if (!draft.title.trim()) {
     problems.push({ step: "details", message: "Add a title." });
   }
-  if (!draft.studyType) {
-    problems.push({ step: "details", message: "Choose the type of study." });
-  } else if (draft.studyType === "other" && !draft.studyTypeOther?.trim()) {
+  if (!draft.researchCategory) {
+    problems.push({ step: "details", message: "Choose the research category." });
+  } else if (draft.researchCategory === "other" && !draft.researchCategoryOther?.trim()) {
     problems.push({
       step: "details",
-      message: "Describe the type of study.",
+      message: "Describe the research category.",
     });
   }
   if (draft.keywords.length === 0) {

@@ -272,14 +272,14 @@ describe("affiliation CSV import", () => {
   });
 });
 
-describe("abstract study type and supporting material", () => {
+describe("abstract research category and supporting material", () => {
   test("'other' needs a description and supporting files are limited to editable drafts", async () => {
     const { t, ids } = await setup();
     const owner = t.withIdentity({ subject: ids.resident });
     const draft = await owner.mutation(api.abstracts.createDraft, {
       title: "Model of sepsis",
-      studyType: "other",
-      studyTypeOther: "  Quality improvement  ",
+      researchCategory: "other",
+      researchCategoryOther: "  Quality improvement  ",
       authorList: [
         { name: "Rin", affiliationId: ids.affiliation, presenting: true },
       ],
@@ -289,7 +289,7 @@ describe("abstract study type and supporting material", () => {
       keywords: ["sepsis"],
       affiliationDeclared: true,
     });
-    expect(draft.studyTypeOther).toBe("Quality improvement");
+    expect(draft.researchCategoryOther).toBe("Quality improvement");
 
     const storageId = await t.run((ctx) =>
       ctx.storage.store(new Blob(["data"], { type: "text/csv" })),
@@ -327,7 +327,7 @@ describe("abstract study type and supporting material", () => {
     expect(review?.files).toHaveLength(1);
     const filtered = await academic.query(api.abstracts.listForReview, {
       paginationOpts: page,
-      studyType: "other",
+      researchCategory: "other",
     });
     expect(filtered.page.map((item) => item.abstract.title)).toEqual([
       "Model of sepsis",

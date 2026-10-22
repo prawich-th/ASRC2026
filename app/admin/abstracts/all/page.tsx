@@ -11,8 +11,8 @@ import {
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { getCategoryLabel } from "@/lib/abstractDisplay";
-import { formatStudyType, STUDY_TYPE_LABELS } from "@/lib/abstractForm";
-import { ABSTRACT_STUDY_TYPES } from "@/lib/formOptions";
+import { formatResearchCategory, RESEARCH_CATEGORY_LABELS } from "@/lib/abstractForm";
+import { ABSTRACT_RESEARCH_CATEGORIES } from "@/lib/formOptions";
 import { usePaginatedQuery } from "convex/react";
 import Link from "next/link";
 import { Suspense, useState } from "react";
@@ -107,7 +107,7 @@ function AbstractDirectory() {
   const status = oneOf(filters.status, STATUS_FILTERS);
   const category = oneOf(filters.category, CATEGORY_FILTERS);
   const reviewed = oneOf(filters.reviewed, REVIEWED_FILTERS);
-  const studyType = oneOf(filters.type, ABSTRACT_STUDY_TYPES);
+  const researchCategory = oneOf(filters.type, ABSTRACT_RESEARCH_CATEGORIES);
   const order = oneOf(filters.sort, SORT_OPTIONS) ?? "newest";
   const from = startOfDay(filters.from) !== undefined ? filters.from : "";
   const to = startOfDay(filters.to) !== undefined ? filters.to : "";
@@ -117,7 +117,7 @@ function AbstractDirectory() {
     status,
     category,
     reviewed,
-    studyType,
+    researchCategory,
     submittedFrom: startOfDay(from),
     // The "to" date is inclusive, so the range ends at the next midnight.
     submittedTo: startOfDay(to, 1),
@@ -169,11 +169,11 @@ function AbstractDirectory() {
           },
         ]
       : []),
-    ...(studyType
+    ...(researchCategory
       ? [
           {
             key: "type",
-            label: STUDY_TYPE_LABELS[studyType],
+            label: RESEARCH_CATEGORY_LABELS[researchCategory],
             onRemove: () => setFilters({ type: "" }),
           },
         ]
@@ -273,16 +273,16 @@ function AbstractDirectory() {
           </select>
         </label>
         <label>
-          Study type
+          Research category
           <select
             className={styles.select}
-            value={studyType ?? ""}
+            value={researchCategory ?? ""}
             onChange={(event) => setFilters({ type: event.target.value })}
           >
-            <option value="">All study types</option>
-            {ABSTRACT_STUDY_TYPES.map((value) => (
+            <option value="">All research categories</option>
+            {ABSTRACT_RESEARCH_CATEGORIES.map((value) => (
               <option key={value} value={value}>
-                {STUDY_TYPE_LABELS[value]}
+                {RESEARCH_CATEGORY_LABELS[value]}
               </option>
             ))}
           </select>
@@ -364,11 +364,11 @@ function AbstractDirectory() {
                       <Link href={`/admin/abstracts/${item.abstract._id}`}>
                         <strong>{item.abstract.title || "Untitled"}</strong>
                       </Link>
-                      {item.abstract.studyType ? (
+                      {item.abstract.researchCategory ? (
                         <span className={styles.cellMeta}>
-                          {formatStudyType(
-                            item.abstract.studyType,
-                            item.abstract.studyTypeOther,
+                          {formatResearchCategory(
+                            item.abstract.researchCategory,
+                            item.abstract.researchCategoryOther,
                           )}
                         </span>
                       ) : null}

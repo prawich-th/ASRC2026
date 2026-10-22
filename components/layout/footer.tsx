@@ -51,7 +51,7 @@ export default function Footer() {
         </div>
         <nav className={styles.right} aria-label="Footer">
           <Link href="/contact">Contact us</Link>
-          <Link href="/guidelines">Submission guidelines</Link>
+          <Link href="/guidelines">Academic guidelines</Link>
           <Link href="/abstracts/submit">Submit an abstract</Link>
           <Link href="/privacy">Privacy policy</Link>
           <Link href="/terms-conditions">Terms and conditions</Link>

@@ -252,10 +252,8 @@ export default function GuidelinesPage() {
       <h3>Research categories</h3>
       <p>
         ASRC encourages submissions across medical, biomedical, and
-        health-related disciplines. The categories below describe the scope of
-        research ASRC welcomes. The submission form does not ask for a
-        category; instead, it asks you to choose the type of study (for
-        example experimental, observational, or systematic review).
+        health-related disciplines. Participants should select the category
+        that most closely represents the main focus of their research.
       </p>
       <ol>
         {researchCategories.map((category) => (
@@ -364,8 +362,9 @@ export default function GuidelinesPage() {
           from the selector and the organizing committee will verify it.
         </li>
         <li>
-          <strong>Type of study:</strong> Choose the type of study that best
-          describes the research, or select “Other” and describe it.
+          <strong>Research category:</strong> Choose the research category
+          that most closely represents the main focus of your research, or
+          select “Other” and describe it.
         </li>
         <li>
           <strong>Supporting files:</strong> You may optionally attach up to
@@ -752,7 +751,7 @@ export default function GuidelinesPage() {
       <p>Before submitting, participants should ensure that they have:</p>
       <ul>
         <li>Confirmed that they meet the eligibility requirements.</li>
-        <li>Chosen the type of study that best describes the research.</li>
+        <li>Selected the appropriate research category.</li>
         <li>
           Prepared the abstract using the required structure and word limit.
         </li>
