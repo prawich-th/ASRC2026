@@ -4,12 +4,13 @@ import { buildUserSearchText, normalizeEmail } from "../lib/userData";
 import { DataModel, Id } from "./_generated/dataModel";
 import { MutationCtx } from "./_generated/server";
 import { claimPreRegisteredUser } from "./lib/preRegistration";
-import { ResendOTP } from "./ResendOTP";
+import { ResendOTP, ResendOTPPasswordReset } from "./ResendOTP";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password<DataModel>({
       verify: ResendOTP,
+      reset: ResendOTPPasswordReset,
       profile(params) {
         const email = normalizeEmail(String(params.email ?? ""));
         if (params.flow === "signUp") {

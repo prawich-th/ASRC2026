@@ -58,3 +58,5 @@ export const ANNOUNCEMENT_TAG_TONES = [
 export const ANNOUNCEMENT_STATUSES = ["draft", "published"] as const;
 
 export const KEY_DATE_TONES = ["green", "orange", "red"] as const;
+
+export const MIN_PASSWORD_LENGTH = 8;

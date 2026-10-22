@@ -10,6 +10,8 @@ import Button from "@/components/form/button";
 import { api } from "@/convex/_generated/api";
 import { FormField } from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
+import { errorMessage } from "@/lib/errorMessage";
+import AuthShell from "./auth-shell";
 
 export default function LoginPage() {
   const { signIn } = useAuthActions();
@@ -45,9 +47,7 @@ export default function LoginPage() {
         setCodeSentMessage("A verification code was sent to your email.");
       }
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Authentication failed",
-      );
+      setError(errorMessage(caught, "Could not sign in."));
     } finally {
       setSubmitting(false);
     }
@@ -64,9 +64,7 @@ export default function LoginPage() {
       await signIn("password", form);
       setPendingPassword("");
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Could not verify email",
-      );
+      setError(errorMessage(caught, "Could not verify email."));
     } finally {
       setSubmitting(false);
     }
@@ -83,9 +81,7 @@ export default function LoginPage() {
       await signIn("password", form);
       setCodeSentMessage("A new verification code was sent.");
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Could not resend code",
-      );
+      setError(errorMessage(caught, "Could not resend code."));
     } finally {
       setSubmitting(false);
     }
@@ -100,69 +96,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className={styles.page}>
-      <section className={styles.login}>
-        <div className={styles.card}>
-          <Link className={styles.back} href="/">
-            <i className="bx bx-arrow-left" aria-hidden="true" />
-            Back to home
-          </Link>
-          <div>
-            <img className={styles.logo} src="/asrc.png" alt="ASRC 2027" />
-          </div>
-          <h1>Sign in.</h1>
-          {verificationEmail ? (
-            <form onSubmit={handleVerification}>
-              <p>{codeSentMessage}</p>
-              <FormField
-                label="Verification code"
-                name="code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                minLength={8}
-                maxLength={8}
-                pattern="[0-9]{8}"
-                required
-              />
-              {error ? <p className={styles.error}>{error}</p> : null}
-              <Button className="primary" disabled={submitting} type="submit">
-                {submitting ? "Please wait…" : "Verify email"}
-              </Button>
-              <Button
-                className="secondary"
-                disabled={submitting || !pendingPassword}
-                type="button"
-                onClick={() => void resendVerificationCode()}
-              >
-                Resend code
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <FormField
-                label="Email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-              />
-              <FormField
-                label="Password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                minLength={8}
-                required
-              />
-              {error ? <p className={styles.error}>{error}</p> : null}
-              <Button className="primary" disabled={submitting} type="submit">
-                {submitting ? "Please wait…" : "Sign in"}
-              </Button>
-            </form>
-          )}
-        </div>
-
+    <AuthShell
+      title="Sign in."
+      footer={
         <div className={styles.register}>
           <p>Don&apos;t have an account?</p>{" "}
           <Link href="/register" className={styles.buttonLink}>
@@ -171,25 +107,69 @@ export default function LoginPage() {
             </Button>
           </Link>
         </div>
-      </section>
-      <section className={styles.info}>
-        <div className={styles.logos}>
-          <img src="/thammasat.png" alt="Thammasat University" />
-          <img src="/cicm.png" alt="CICM" />
-          <img src="/smo.png" alt="SMO" />
-        </div>
-        <span className={styles.infoText}>
-          <h1>CICM ASRC 2027</h1>
-          <p>Annual Student Research Conference</p>
-          <p>Chulabhorn International College of Medicine</p>
-        </span>
-      </section>
-      {/* Back to front: gray, orange, green. */}
-      <div className={styles.rings} aria-hidden="true">
-        <span className={styles.gray} />
-        <span className={styles.orange} />
-        <span className={styles.green} />
-      </div>
-    </main>
+      }
+    >
+      {verificationEmail ? (
+        <form onSubmit={handleVerification}>
+          <p>{codeSentMessage}</p>
+          <FormField
+            label="Verification code"
+            name="code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            minLength={8}
+            maxLength={8}
+            pattern="[0-9]{8}"
+            required
+          />
+          {error ? (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button className="primary" disabled={submitting} type="submit">
+            {submitting ? "Please wait…" : "Verify email"}
+          </Button>
+          <Button
+            className="secondary"
+            disabled={submitting || !pendingPassword}
+            type="button"
+            onClick={() => void resendVerificationCode()}
+          >
+            Resend code
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <FormField
+            label="Email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+          />
+          <FormField
+            label="Password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            minLength={8}
+            required
+          />
+          <Link className={styles.forgot} href="/login/reset">
+            Forgot password?
+          </Link>
+          {error ? (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button className="primary" disabled={submitting} type="submit">
+            {submitting ? "Please wait…" : "Sign in"}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

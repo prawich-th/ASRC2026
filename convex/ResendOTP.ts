@@ -9,7 +9,37 @@ function getEnvironmentVariable(name: string): string | undefined {
   return runtime.process?.env?.[name];
 }
 
-function verificationEmailHtml(token: string, assetBaseUrl: string): string {
+type CodeEmail = {
+  subject: string;
+  badge: string;
+  heading: string;
+  intro: string;
+  codeLabel: string;
+};
+
+const VERIFICATION_EMAIL: CodeEmail = {
+  subject: "Verify your ASRC 2027 account",
+  badge: "Email verification",
+  heading: "Verify your email",
+  intro:
+    "Enter this code on the ASRC registration page to finish creating your account.",
+  codeLabel: "Verification code",
+};
+
+const PASSWORD_RESET_EMAIL: CodeEmail = {
+  subject: "Reset your ASRC 2027 password",
+  badge: "Password reset",
+  heading: "Reset your password",
+  intro:
+    "Enter this code on the ASRC password reset page, then choose a new password.",
+  codeLabel: "Reset code",
+};
+
+function codeEmailHtml(
+  email: CodeEmail,
+  token: string,
+  assetBaseUrl: string,
+): string {
   // const assets = assetBaseUrl.replace(/\/+$/, "");
   const assets = "https://asrc-2027.vercel.app/";
   return `<!doctype html>
@@ -17,11 +47,11 @@ function verificationEmailHtml(token: string, assetBaseUrl: string): string {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Verify your ASRC 2027 account</title>
+    <title>${email.subject}</title>
   </head>
   <body style="margin:0;padding:0;background:#fafafa;color:#171717;font-family:Inter,Arial,sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-      Your ASRC 2027 verification code is ${token}.
+      Your ASRC 2027 ${email.codeLabel.toLowerCase()} is ${token}.
     </div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa;">
       <tr>
@@ -59,17 +89,17 @@ function verificationEmailHtml(token: string, assetBaseUrl: string): string {
             <tr>
               <td colspan="3" style="padding:36px 32px;background:#ffffff;border:1px solid #eee7dd;border-top:0;border-radius:0 0 8px 8px;">
                 <div style="display:inline-block;padding:6px 10px;border-radius:999px;background:#f9e9e5;color:#9c2f25;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">
-                  Email verification
+                  ${email.badge}
                 </div>
                 <h1 style="margin:18px 0 10px;font-size:28px;line-height:1.25;color:#171717;">
-                  Verify your email
+                  ${email.heading}
                 </h1>
                 <p style="margin:0;color:#625e57;font-size:16px;line-height:1.65;">
-                  Enter this code on the ASRC registration page to finish creating your account.
+                  ${email.intro}
                 </p>
                 <div style="margin:28px 0;padding:22px 16px;border:1px solid #ded7cd;border-radius:10px;background:#fffcf7;text-align:center;">
                   <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#777168;">
-                    Verification code
+                    ${email.codeLabel}
                   </div>
                   <div style="margin-top:10px;color:#c3003f;font-size:34px;font-weight:700;letter-spacing:0.22em;line-height:1.2;">
                     ${token}
@@ -116,40 +146,49 @@ function verificationEmailHtml(token: string, assetBaseUrl: string): string {
 </html>`;
 }
 
-export const ResendOTP = Resend({
-  id: "resend-otp",
-  apiKey: getEnvironmentVariable("AUTH_RESEND_KEY"),
-  maxAge: 60 * 15,
-  async generateVerificationToken() {
-    const random: RandomReader = {
-      read(bytes) {
-        crypto.getRandomValues(bytes as Uint8Array<ArrayBuffer>);
-      },
-    };
-    return generateRandomString(random, "0123456789", 8);
-  },
-  async sendVerificationRequest({ identifier: email, provider, token }) {
-    const from = getEnvironmentVariable("AUTH_EMAIL_FROM");
-    const assetBaseUrl =
-      getEnvironmentVariable("AUTH_EMAIL_ASSET_BASE_URL") ??
-      getEnvironmentVariable("SITE_URL");
-    if (!provider.apiKey || !from || !assetBaseUrl) {
-      throw new Error(
-        "AUTH_RESEND_KEY, AUTH_EMAIL_FROM, and SITE_URL must be configured",
-      );
-    }
+function codeEmailProvider(id: string, email: CodeEmail) {
+  return Resend({
+    id,
+    apiKey: getEnvironmentVariable("AUTH_RESEND_KEY"),
+    maxAge: 60 * 15,
+    async generateVerificationToken() {
+      const random: RandomReader = {
+        read(bytes) {
+          crypto.getRandomValues(bytes as Uint8Array<ArrayBuffer>);
+        },
+      };
+      return generateRandomString(random, "0123456789", 8);
+    },
+    async sendVerificationRequest({ identifier, provider, token }) {
+      const from = getEnvironmentVariable("AUTH_EMAIL_FROM");
+      const assetBaseUrl =
+        getEnvironmentVariable("AUTH_EMAIL_ASSET_BASE_URL") ??
+        getEnvironmentVariable("SITE_URL");
+      if (!provider.apiKey || !from || !assetBaseUrl) {
+        throw new Error(
+          "AUTH_RESEND_KEY, AUTH_EMAIL_FROM, and SITE_URL must be configured",
+        );
+      }
 
-    const resend = new ResendAPI(provider.apiKey);
-    const { error } = await resend.emails.send({
-      from,
-      to: [email],
-      subject: "Verify your ASRC 2027 account",
-      text: `Your ASRC 2027 verification code is ${token}. It expires in 15 minutes.`,
-      html: verificationEmailHtml(token, assetBaseUrl),
-    });
-    if (error) {
-      console.error("Could not send verification email", error);
-      throw new Error("Could not send verification email");
-    }
-  },
-});
+      const resend = new ResendAPI(provider.apiKey);
+      const { error } = await resend.emails.send({
+        from,
+        to: [identifier],
+        subject: email.subject,
+        text: `Your ASRC 2027 ${email.codeLabel.toLowerCase()} is ${token}. It expires in 15 minutes.`,
+        html: codeEmailHtml(email, token, assetBaseUrl),
+      });
+      if (error) {
+        console.error(`Could not send the ${email.codeLabel.toLowerCase()} email`, error);
+        throw new Error(`Could not send the ${email.codeLabel.toLowerCase()} email`);
+      }
+    },
+  });
+}
+
+export const ResendOTP = codeEmailProvider("resend-otp", VERIFICATION_EMAIL);
+
+export const ResendOTPPasswordReset = codeEmailProvider(
+  "resend-otp-password-reset",
+  PASSWORD_RESET_EMAIL,
+);

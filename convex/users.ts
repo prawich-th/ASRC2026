@@ -1,11 +1,19 @@
+import {
+  getAuthSessionId,
+  getAuthUserId,
+  invalidateSessions,
+  modifyAccountCredentials,
+  retrieveAccount,
+} from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { buildDisplayName, normalizeEmail } from "../lib/userData";
+import { MIN_PASSWORD_LENGTH } from "../lib/formOptions";
+import { normalizeEmail } from "../lib/userData";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
-import { requireAffiliation, userAffiliationPatch } from "./lib/affiliation";
+import { action, internalQuery, mutation, query } from "./_generated/server";
 import { getCurrentUser, getCurrentUserOrNull } from "./lib/auth";
 import { buildProfilePatch, profileInputFields } from "./lib/profileInput";
-import { prefixValidator, userValidator } from "./lib/profile";
+import { userValidator } from "./lib/profile";
 
 type StorageMetadata = {
   _id: Id<"_storage">;
@@ -44,54 +52,94 @@ export const completeProfile = mutation({
   },
 });
 
+/** The participant's own profile edit; same rules as registration. */
 export const updateProfile = mutation({
-  args: {
-    prefix: prefixValidator,
-    firstName: v.string(),
-    otherName: v.optional(v.string()),
-    lastName: v.string(),
-    suffix: v.optional(v.string()),
-    affiliationId: v.id("affiliations"),
-    position: v.optional(v.string()),
-  },
+  args: profileInputFields,
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    const name = buildDisplayName([
-      args.prefix,
-      args.firstName,
-      args.otherName,
-      args.lastName,
-      args.suffix,
-    ]);
-    const normalizedEmail = user.email
-      ? normalizeEmail(user.email)
-      : undefined;
-    if (!args.firstName.trim() || !args.lastName.trim()) {
-      throw new Error("First name and last name are required");
-    }
-    const affiliation = await requireAffiliation(ctx, args.affiliationId);
+    await ctx.db.patch("users", user._id, await buildProfilePatch(ctx, user, args));
+    return null;
+  },
+});
 
+export const updateNotificationPreference = mutation({
+  args: { wantsNotifications: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
     await ctx.db.patch("users", user._id, {
-      prefix: args.prefix,
-      firstName: args.firstName.trim(),
-      otherName: args.otherName?.trim() || undefined,
-      lastName: args.lastName.trim(),
-      suffix: args.suffix?.trim() || undefined,
-      position: args.position?.trim() || undefined,
-      name,
-      normalizedEmail,
-      ...userAffiliationPatch(
-        {
-          ...user,
-          name,
-          normalizedEmail,
-          position: args.position?.trim() || undefined,
-        },
-        affiliation,
-      ),
+      wantsNotifications: args.wantsNotifications,
     });
+    return null;
+  },
+});
 
+export const currentAccountEmail = internalQuery({
+  args: { userId: v.id("users") },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get("users", args.userId);
+    return user?.email ? normalizeEmail(user.email) : null;
+  },
+});
+
+/**
+ * Changes the signed-in user's password after checking the current one, then
+ * signs out their other sessions.
+ */
+export const changePassword = action({
+  args: { currentPassword: v.string(), newPassword: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+    if (args.newPassword.length < MIN_PASSWORD_LENGTH) {
+      throw new Error(
+        `New password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+      );
+    }
+    if (args.newPassword === args.currentPassword) {
+      throw new Error("New password must be different from the current one");
+    }
+    const email: string | null = await ctx.runQuery(
+      internal.users.currentAccountEmail,
+      { userId },
+    );
+    if (!email) {
+      throw new Error("This account has no email address");
+    }
+
+    let accountUserId: Id<"users">;
+    try {
+      const { user } = await retrieveAccount(ctx, {
+        provider: "password",
+        account: { id: email, secret: args.currentPassword },
+      });
+      accountUserId = user._id;
+    } catch (caught) {
+      if (caught instanceof Error && caught.message.includes("TooManyFailedAttempts")) {
+        throw new Error(
+          "Too many failed attempts. Please wait a few minutes and try again.",
+        );
+      }
+      throw new Error("Current password is incorrect");
+    }
+    if (accountUserId !== userId) {
+      throw new Error("Current password is incorrect");
+    }
+
+    await modifyAccountCredentials(ctx, {
+      provider: "password",
+      account: { id: email, secret: args.newPassword },
+    });
+    const sessionId = await getAuthSessionId(ctx);
+    await invalidateSessions(ctx, {
+      userId,
+      except: sessionId ? [sessionId] : [],
+    });
     return null;
   },
 });

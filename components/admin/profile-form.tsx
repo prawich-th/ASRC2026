@@ -2,105 +2,14 @@
 
 import AffiliationPicker from "@/components/affiliations/affiliation-picker";
 import Button from "@/components/form/button";
-import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   MEDICAL_STUDENT_YEARS,
   PARTICIPANT_CATEGORIES,
   PREFIXES,
 } from "@/lib/formOptions";
+import { EMPTY_PROFILE, ProfileFormValues } from "@/lib/profileForm";
 import { FormEvent, ReactNode, useState } from "react";
 import styles from "./admin.module.scss";
-
-export type ProfileFormValues = {
-  prefix: string;
-  firstName: string;
-  otherName: string;
-  lastName: string;
-  suffix: string;
-  specialty: string;
-  phone: string;
-  affiliationId?: Id<"affiliations">;
-  position: string;
-  participantCategory: string;
-  city: string;
-};
-
-export type ProfileInputArgs = {
-  prefix: (typeof PREFIXES)[number];
-  firstName: string;
-  otherName?: string;
-  lastName: string;
-  suffix?: string;
-  specialty?: string;
-  phone: string;
-  affiliationId: Id<"affiliations">;
-  position?: string;
-  participantCategory: (typeof PARTICIPANT_CATEGORIES)[number];
-  city?: string;
-};
-
-export const EMPTY_PROFILE: ProfileFormValues = {
-  prefix: "",
-  firstName: "",
-  otherName: "",
-  lastName: "",
-  suffix: "",
-  specialty: "",
-  phone: "",
-  position: "",
-  participantCategory: "",
-  city: "",
-};
-
-export function profileValuesFromUser(user: Doc<"users">): ProfileFormValues {
-  return {
-    prefix: user.prefix ?? "",
-    firstName: user.firstName ?? "",
-    otherName: user.otherName ?? "",
-    lastName: user.lastName ?? "",
-    suffix: user.suffix ?? "",
-    specialty: user.specialty ?? "",
-    phone: user.phone ?? "",
-    affiliationId: user.affiliationId,
-    position: user.position ?? "",
-    participantCategory: user.participantCategory ?? "",
-    city: user.city ?? "",
-  };
-}
-
-/** Converts form values to mutation args, or explains what is missing. */
-export function toProfileInput(
-  values: ProfileFormValues,
-): { input: ProfileInputArgs } | { error: string } {
-  if (!(PREFIXES as readonly string[]).includes(values.prefix)) {
-    return { error: "Choose a prefix." };
-  }
-  if (
-    !(PARTICIPANT_CATEGORIES as readonly string[]).includes(
-      values.participantCategory,
-    )
-  ) {
-    return { error: "Choose a participant category." };
-  }
-  if (!values.affiliationId) {
-    return { error: "Choose an affiliation." };
-  }
-  return {
-    input: {
-      prefix: values.prefix as ProfileInputArgs["prefix"],
-      firstName: values.firstName,
-      otherName: values.otherName || undefined,
-      lastName: values.lastName,
-      suffix: values.suffix || undefined,
-      specialty: values.specialty || undefined,
-      phone: values.phone,
-      affiliationId: values.affiliationId,
-      position: values.position || undefined,
-      participantCategory:
-        values.participantCategory as ProfileInputArgs["participantCategory"],
-    },
-  };
-}
 
 /**
  * The registration profile fields, laid out for the admin dashboard. Used to
@@ -229,6 +138,7 @@ export default function ProfileForm({
         ) : (
           text("position", "Position")
         )}
+        {text("city", "City (leave blank to use the affiliation's)")}
       </div>
       {children}
       <div className={styles.actions}>

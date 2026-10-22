@@ -57,6 +57,7 @@ function FieldShell({
   hint,
   compact = false,
   className,
+  id,
   children,
 }: BaseFieldProps & { children: ReactNode }) {
   return (
@@ -68,7 +69,7 @@ function FieldShell({
         className ?? "",
       ].join(" ")}
     >
-      {label ? <label>{label}</label> : null}
+      {label ? <label htmlFor={id}>{label}</label> : null}
       {children}
       {hint ? <p className={styles.hint}>{hint}</p> : null}
       {errorMessage ? <p className={styles.errorMessage}>{errorMessage}</p> : null}
@@ -95,6 +96,7 @@ export function FormField({
       hint={hint}
       compact={compact}
       className={className}
+      id={inputId}
     >
       <div className={styles.inputRow}>
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
@@ -123,6 +125,7 @@ export function SelectField({
       hint={hint}
       compact={compact}
       className={className}
+      id={inputId}
     >
       <select id={inputId} {...rest}>
         {placeholder ? (
@@ -157,6 +160,7 @@ export function TextAreaField({
       hint={hint}
       compact={compact}
       className={className}
+      id={inputId}
     >
       <textarea id={inputId} {...rest} />
     </FieldShell>
