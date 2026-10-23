@@ -16,6 +16,7 @@ type NavItem = {
   label: string;
   icon: string;
   isActive: (pathname: string) => boolean;
+  badge?: number;
 };
 
 type NavGroup = {
@@ -38,7 +39,10 @@ function startsWith(href: string) {
     pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function buildNavGroups(role: StaffRole | undefined): NavGroup[] {
+function buildNavGroups(
+  role: StaffRole | undefined,
+  mail: { unread: number } | undefined,
+): NavGroup[] {
   const groups: NavGroup[] = [
     {
       label: "My account",
@@ -70,6 +74,15 @@ function buildNavGroups(role: StaffRole | undefined): NavGroup[] {
   }
 
   const admin: NavItem[] = [];
+  if (mail) {
+    admin.push({
+      href: "/admin/mail",
+      label: "Mail",
+      icon: "bx-envelope",
+      isActive: startsWith("/admin/mail"),
+      badge: mail.unread,
+    });
+  }
   if (role === "super_admin") {
     admin.push({
       href: "/admin/users",
@@ -168,6 +181,7 @@ export default function DashboardShell({
   const pathname = usePathname();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(api.users.me);
+  const inboxes = useQuery(api.mail.listMyInboxes, isAuthenticated ? {} : "skip");
   const [menuOpen, setMenuOpen] = useState(false);
   // The sidebar only renders after auth resolves on the client, so reading
   // storage during the first render cannot cause a hydration mismatch.
@@ -204,7 +218,11 @@ export default function DashboardShell({
   }
 
   const role = isStaffRole(user.role) ? user.role : undefined;
-  const groups = buildNavGroups(role);
+  const mail =
+    inboxes && inboxes.length > 0
+      ? { unread: inboxes.reduce((sum, inbox) => sum + inbox.unread, 0) }
+      : undefined;
+  const groups = buildNavGroups(role, mail);
   const activeItem = groups
     .flatMap((group) => group.items)
     .find((item) => item.isActive(pathname));
@@ -292,6 +310,14 @@ export default function DashboardShell({
                         >
                           <i className={`bx ${item.icon}`} aria-hidden="true" />
                           <span>{item.label}</span>
+                          {item.badge ? (
+                            <b
+                              className={styles.navBadge}
+                              aria-label={`${item.badge} unread`}
+                            >
+                              {item.badge >= 100 ? "99+" : item.badge}
+                            </b>
+                          ) : null}
                         </Link>
                       </li>
                     );

@@ -4,22 +4,10 @@ import { components, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { internalMutation, MutationCtx } from "./_generated/server";
 import { EmailContent } from "./lib/emailTemplates";
+import { getResendApiKey, isTestEnvironment } from "./lib/resendKey";
 
-const TEST_API_KEY = "re_test_notifications";
 const TEST_FROM = "ASRC 2027 <notifications@example.com>";
 const BATCH_SIZE = 25;
-
-function isTestEnvironment(): boolean {
-  return process.env.NODE_ENV === "test";
-}
-
-function getApiKey(): string | undefined {
-  return (
-    process.env.RESEND_API_KEY ??
-    process.env.AUTH_RESEND_KEY ??
-    (isTestEnvironment() ? TEST_API_KEY : undefined)
-  );
-}
 
 function getFromAddress(): string {
   const from = process.env.AUTH_EMAIL_FROM;
@@ -51,7 +39,7 @@ function isDeliverableEmail(email: string | undefined): email is string {
 }
 
 const resend = new Resend(components.resend, {
-  apiKey: getApiKey(),
+  apiKey: getResendApiKey(),
   testMode: process.env.RESEND_TEST_MODE === "true",
 });
 

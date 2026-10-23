@@ -60,6 +60,8 @@ export const userFields = {
   wantsNotifications: v.optional(v.boolean()),
   profileComplete: v.optional(v.boolean()),
   role: v.optional(userRoleValidator),
+  /** Organising committee title for staff (e.g. "Website Lead"), shown in mail signatures. */
+  staffPosition: v.optional(v.string()),
   preRegisteredAt: v.optional(v.number()),
   preRegisteredBy: v.optional(v.id("users")),
   claimedAt: v.optional(v.number()),

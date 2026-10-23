@@ -4,6 +4,13 @@ import { v } from "convex/values";
 import { abstractFields, abstractFileFields } from "./lib/abstract";
 import { affiliationFields } from "./lib/affiliation";
 import { announcementFields, keyDateFields } from "./lib/content";
+import {
+  mailInboxFields,
+  mailInboxMemberFields,
+  mailThreadFields,
+  mailUploadFields,
+  mailWebhookEventFields,
+} from "./lib/mail";
 import { notificationCampaignFields } from "./lib/notification";
 import { userFields } from "./lib/profile";
 
@@ -51,6 +58,26 @@ export default defineSchema({
     .index("by_sortOrder", ["sortOrder"])
     .index("by_published_and_sortOrder", ["published", "sortOrder"]),
   notificationCampaigns: defineTable(notificationCampaignFields),
+  mailInboxes: defineTable(mailInboxFields)
+    .index("by_address", ["address"])
+    .index("by_resendInboxId", ["resendInboxId"]),
+  mailInboxMembers: defineTable(mailInboxMemberFields)
+    .index("by_userId", ["userId"])
+    .index("by_inboxId_and_userId", ["inboxId", "userId"]),
+  mailThreads: defineTable(mailThreadFields)
+    .index("by_resendThreadId", ["resendThreadId"])
+    .index("by_inboxId_and_folder_and_lastActivityAt", [
+      "inboxId",
+      "folder",
+      "lastActivityAt",
+    ])
+    .index("by_inboxId_and_folder_and_read", ["inboxId", "folder", "read"]),
+  mailUploads: defineTable(mailUploadFields).index("by_storageId", [
+    "storageId",
+  ]),
+  mailWebhookEvents: defineTable(mailWebhookEventFields).index("by_svixId", [
+    "svixId",
+  ]),
   messages: defineTable({
     body: v.string(),
     user: v.id("users"),

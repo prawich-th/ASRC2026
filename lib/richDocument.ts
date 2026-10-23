@@ -265,7 +265,7 @@ function segmentHtml(segment: RichDocumentLine["segments"][number]): string {
   if (attributes.italic) html = `<em>${html}</em>`;
   if (attributes.bold) html = `<strong>${html}</strong>`;
   if (attributes.link) {
-    html = `<a href="${escapeHtml(attributes.link)}" style="color:#135642;text-decoration:underline;">${html}</a>`;
+    html = `<a href="${escapeHtml(attributes.link)}" style="color:#c3003f;text-decoration:underline;">${html}</a>`;
   }
   return html;
 }
@@ -287,7 +287,7 @@ export function richDocumentToEmailHtml(
       if (list !== tag) {
         closeList();
         output.push(
-          `<${tag} style="margin:0 0 14px;padding-left:22px;color:#4f4b45;font-size:15px;line-height:1.7;">`,
+          `<${tag} style="margin:0 0 16px;padding-left:24px;color:#171717;font-size:16px;line-height:1.6;">`,
         );
         list = tag;
       }
@@ -299,15 +299,15 @@ export function richDocumentToEmailHtml(
     if (line.block.header) {
       const level = line.block.header + 1;
       output.push(
-        `<h${level} style="margin:22px 0 8px;color:#171717;line-height:1.35;">${html}</h${level}>`,
+        `<h${level} style="margin:24px 0 8px;color:#171717;font-size:20px;font-weight:600;line-height:1.3;">${html}</h${level}>`,
       );
     } else if (line.block.blockquote) {
       output.push(
-        `<blockquote style="margin:16px 0;padding:12px 16px;border-left:4px solid #dc7339;background:#fffcf7;color:#625e57;font-size:15px;line-height:1.65;">${html}</blockquote>`,
+        `<blockquote style="margin:16px 0;padding:4px 0 4px 16px;border-left:4px solid #dc7339;color:#68635c;font-size:16px;line-height:1.6;">${html}</blockquote>`,
       );
     } else {
       output.push(
-        `<p style="margin:0 0 14px;color:#4f4b45;font-size:15px;line-height:1.7;">${html}</p>`,
+        `<p style="margin:0 0 16px;color:#171717;font-size:16px;line-height:1.6;">${html}</p>`,
       );
     }
   }

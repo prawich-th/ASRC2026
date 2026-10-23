@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  verificationEmail,
   abstractDecisionEmail,
   abstractSubmissionEmail,
   announcementEmail,
@@ -20,7 +21,7 @@ describe("conference email templates", () => {
     expect(email.html).toContain("Deadline &lt;extended&gt;");
     expect(email.html).toContain("Friday &amp; review");
     expect(email.html).toContain(
-      "https://asrc-2027.vercel.app/asrc.png",
+      "https://cicmasrc.org/asrc.png",
     );
     expect(email.html).toContain("Full article");
     expect(email.html).toContain("<strong>important</strong>");
@@ -86,5 +87,29 @@ describe("conference email templates", () => {
     expect(email.html).toContain("482917");
     expect(email.html).toContain("Clarify &lt;methods&gt; &amp; results.");
     expect(email.text).toContain("Reviewer feedback");
+  });
+
+  test("renders the verification code without an action button", () => {
+    const email = verificationEmail({ token: "12345678" });
+
+    expect(email.subject).toBe("Verify your ASRC 2027 account");
+    expect(email.html).toContain("12345678");
+    expect(email.html).toContain("15 minutes");
+    expect(email.html).toContain("https://cicmasrc.org/email/ring-green.png");
+    expect(email.text).toContain("12345678");
+  });
+
+  test("states the presentation type on selected abstracts", () => {
+    const email = abstractDecisionEmail({
+      decision: "selected",
+      title: "A Study",
+      submissionId: "482917",
+      category: "poster",
+      url: "https://example.com/abstracts/abstract-1",
+    });
+
+    expect(email.html).toContain("Poster presentation");
+    expect(email.html).toContain("for poster presentation at ASRC 2027");
+    expect(email.text).toContain("Presentation: Poster presentation");
   });
 });

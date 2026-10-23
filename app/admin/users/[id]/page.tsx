@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "@/components/admin/admin.module.scss";
+import MailInboxAssignments from "@/components/admin/mail-inbox-assignments";
 import ProfileForm, {
   ProfileFormValues,
   profileValuesFromUser,
@@ -137,6 +138,10 @@ export default function EditUserPage() {
           {notice ? <p className={styles.success}>{notice}</p> : null}
         </ProfileForm>
       </section>
+      {user.role ? <MailInboxAssignments
+          userId={user._id}
+          staffPosition={user.staffPosition}
+        /> : null}
     </div>
   );
 }

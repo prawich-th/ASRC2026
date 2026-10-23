@@ -816,6 +816,7 @@ export const saveReview = mutation({
           title: updated.title,
           submissionId: code,
           feedback: updated.submitterFeedback,
+          category: updated.category,
           url: getSiteUrl(`/abstracts/${updated._id}`),
         }),
       );

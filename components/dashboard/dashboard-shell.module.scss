@@ -162,6 +162,20 @@
   text-transform: uppercase;
 }
 
+// Unread count on a nav item, pushed to the right edge.
+.navBadge {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--tu-red);
+  color: var(--surface);
+  font: 600 12px/22px var(--font-sans);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .link {
   display: flex;
   align-items: center;
@@ -282,7 +296,8 @@
 
     .identityText,
     .groupLabel,
-    .link span {
+    .link span,
+    .navBadge {
       display: none;
     }
 

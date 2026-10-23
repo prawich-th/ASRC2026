@@ -16,6 +16,7 @@ import {
 } from "./_generated/server";
 import { resolveAffiliation } from "./lib/affiliation";
 import { requireRole } from "./lib/auth";
+import { removeInboxMemberships } from "./lib/mail";
 import { buildProfilePatch, profileInputValidator } from "./lib/profileInput";
 import {
   participantCategoryValidator,
@@ -397,6 +398,9 @@ export const setRole = mutation({
     await ctx.db.patch("users", target._id, {
       role: args.role === null ? undefined : args.role,
     });
+    if (args.role === null) {
+      await removeInboxMemberships(ctx, target._id);
+    }
     const updated = await ctx.db.get("users", target._id);
     if (!updated) {
       throw new Error("Could not update user role");
@@ -420,11 +424,36 @@ export const removeRole = mutation({
     }
 
     await ctx.db.patch("users", target._id, { role: undefined });
+    await removeInboxMemberships(ctx, target._id);
     const updated = await ctx.db.get("users", target._id);
     if (!updated) {
       throw new Error("Could not remove user role");
     }
     return updated;
+  },
+});
+
+/** Committee title shown in this staff member's mail signature. */
+export const setStaffPosition = mutation({
+  args: { userId: v.id("users"), staffPosition: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireRole(ctx, ["super_admin"]);
+    const target = await ctx.db.get("users", args.userId);
+    if (!target) {
+      throw new Error("User not found");
+    }
+    if (!target.role) {
+      throw new Error("Only staff members have a committee position");
+    }
+    const staffPosition = args.staffPosition.trim().replace(/\s+/g, " ");
+    if (staffPosition.length > 80) {
+      throw new Error("Keep the position under 80 characters");
+    }
+    await ctx.db.patch("users", target._id, {
+      staffPosition: staffPosition || undefined,
+    });
+    return null;
   },
 });
 
