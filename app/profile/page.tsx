@@ -1,36 +1,58 @@
 "use client";
 
-import AffiliationPicker from "@/components/affiliations/affiliation-picker";
 import Button from "@/components/form/button";
-import { FormField, SelectField } from "@/components/form/Form";
+import {
+  CheckboxField,
+  FormField,
+  PasswordField,
+} from "@/components/form/Form";
 import LoadingScreen from "@/components/layout/loading-screen";
-import { api } from "@/convex/_generated/api";
-import { PREFIXES } from "@/lib/formOptions";
-import { Id } from "@/convex/_generated/dataModel";
-import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import InvitationLetter from "@/components/profile/invitation-letter";
+import ProfileFields from "@/components/profile/profile-fields";
+import { api } from "@/convex/_generated/api";
+import { Doc, Id } from "@/convex/_generated/dataModel";
+import { errorMessage } from "@/lib/errorMessage";
+import { MIN_PASSWORD_LENGTH } from "@/lib/formOptions";
+import {
+  ProfileFormValues,
+  profileValuesEqual,
+  profileValuesFromUser,
+  toProfileInput,
+} from "@/lib/profileForm";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./profile.module.scss";
 
-const prefixOptions = PREFIXES.map((prefix) => ({
-  value: prefix,
-  label: prefix,
-}));
-
-type ProfileDraft = {
-  prefix: (typeof PREFIXES)[number];
-  firstName: string;
-  otherName: string;
-  lastName: string;
-  suffix: string;
-  affiliationId?: Id<"affiliations">;
-  position: string;
-};
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export default function ProfilePage() {
-  const router = useRouter();
   const user = useQuery(api.users.me);
+
+  if (!user) {
+    return <LoadingScreen variant="inline" what="your profile" />;
+  }
+
+  return (
+    <div className={styles.inner}>
+      <div className={styles.pageHeader}>
+        <div>
+          <h1>Profile</h1>
+          <p>
+            Keep your details up to date for certificates and the programme.
+          </p>
+        </div>
+      </div>
+      <PersonalInformation user={user} />
+      <EmailPreferences user={user} />
+      <AccountSecurity email={user.email} />
+
+      {/* Letters are not issued yet; pass the uploaded file's URL here. */}
+      <InvitationLetter />
+    </div>
+  );
+}
+
+function PersonalInformation({ user }: { user: Doc<"users"> }) {
   const updateProfile = useMutation(api.users.updateProfile);
   const generateProfileImageUploadUrl = useMutation(
     api.users.generateProfileImageUploadUrl,
@@ -38,73 +60,55 @@ export default function ProfilePage() {
   const updateProfileImage = useMutation(api.users.updateProfileImage);
   const removeProfileImage = useMutation(api.users.removeProfileImage);
 
-  const [draft, setDraft] = useState<ProfileDraft | null>(null);
+  const [draft, setDraft] = useState<ProfileFormValues | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const profileSnapshot = useMemo<ProfileDraft | null>(() => {
-    if (!user) {
-      return null;
-    }
-    return {
-      prefix: user.prefix ?? PREFIXES[0],
-      firstName: user.firstName ?? "",
-      otherName: user.otherName ?? "",
-      lastName: user.lastName ?? "",
-      suffix: user.suffix ?? "",
-      affiliationId: user.affiliationId,
-      position: user.position ?? "",
-    };
-  }, [user]);
+  const savedValues = profileValuesFromUser(user);
+  const values = draft ?? savedValues;
+  const dirty = draft !== null && !profileValuesEqual(draft, savedValues);
 
-  const formValues = draft ?? profileSnapshot;
-
-  const formReady = useMemo(() => {
-    if (!formValues) {
-      return false;
+  useEffect(() => {
+    if (!dirty) {
+      return;
     }
-    return (
-      formValues.firstName.trim().length > 0 &&
-      formValues.lastName.trim().length > 0 &&
-      formValues.affiliationId !== undefined
-    );
-  }, [formValues]);
+    function warn(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  function edit(next: ProfileFormValues) {
+    setDraft(next);
+    setSaved(false);
+  }
+
+  function discard() {
+    setDraft(null);
+    setError("");
+  }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    if (!formValues) {
-      setError("Profile data is unavailable. Please refresh this page.");
-      return;
-    }
-    if (!formReady || !formValues.affiliationId) {
-      setError(
-        "Please complete prefix, first name, last name, and affiliation.",
-      );
+    setSaved(false);
+    const result = toProfileInput(values);
+    if ("error" in result) {
+      setError(result.error);
       return;
     }
 
     setSaving(true);
     try {
-      await updateProfile({
-        prefix: formValues.prefix,
-        firstName: formValues.firstName,
-        otherName: formValues.otherName.trim()
-          ? formValues.otherName
-          : undefined,
-        lastName: formValues.lastName,
-        suffix: formValues.suffix.trim() ? formValues.suffix : undefined,
-        affiliationId: formValues.affiliationId,
-        position: formValues.position.trim() ? formValues.position : undefined,
-      });
+      await updateProfile(result.input);
       setDraft(null);
-      router.refresh();
+      setSaved(true);
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Could not update profile.",
-      );
+      setError(errorMessage(caught, "Could not update profile."));
     } finally {
       setSaving(false);
     }
@@ -120,13 +124,11 @@ export default function ProfilePage() {
     if (!file) {
       return;
     }
-
     if (!file.type.startsWith("image/")) {
       setError("Please choose an image file.");
       return;
     }
-
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_IMAGE_BYTES) {
       setError("Please upload an image smaller than 5MB.");
       return;
     }
@@ -136,27 +138,18 @@ export default function ProfilePage() {
       const uploadUrl = await generateProfileImageUploadUrl();
       const uploadResult = await fetch(uploadUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": file.type || "application/octet-stream",
-        },
+        headers: { "Content-Type": file.type || "application/octet-stream" },
         body: file,
       });
-
       if (!uploadResult.ok) {
         throw new Error("Could not upload image.");
       }
-
       const { storageId } = (await uploadResult.json()) as {
         storageId: Id<"_storage">;
       };
       await updateProfileImage({ storageId });
-      router.refresh();
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Could not update profile image.",
-      );
+      setError(errorMessage(caught, "Could not update profile image."));
     } finally {
       setImageUploading(false);
     }
@@ -167,175 +160,275 @@ export default function ProfilePage() {
     setImageUploading(true);
     try {
       await removeProfileImage();
-      router.refresh();
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Could not remove profile image.",
-      );
+      setError(errorMessage(caught, "Could not remove profile image."));
     } finally {
       setImageUploading(false);
     }
   }
 
-  if (!user || !formValues) {
-    return <LoadingScreen variant="inline" what="your profile" />;
-  }
-
   return (
-    <div className={styles.inner}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h1>Profile</h1>
-          <p>
-            Keep your name and affiliation up to date for certificates and the
-            programme.
-          </p>
-        </div>
-      </div>
-      <section className={styles.card}>
-        <h2>Personal information</h2>
-        <form className={styles.profileForm} onSubmit={handleSave}>
-          <div className={styles.avatarColumn}>
-            {user.image ? (
-              <img
-                src={user.image}
-                alt={`${user.firstName ?? "User"} profile`}
-                className={styles.avatar}
-              />
-            ) : (
-              <div className={styles.avatarPlaceholder}>
-                <i className="bx bx-user" aria-hidden="true" />
-              </div>
-            )}
-            <input
-              ref={fileInputRef}
-              className={styles.hiddenFileInput}
-              type="file"
-              accept="image/*"
-              onChange={handleProfileImageChange}
+    <section className={styles.card} aria-labelledby="personal-information">
+      <header className={styles.cardHeader}>
+        <h2 id="personal-information">Personal information</h2>
+        <p>Used on your certificate, badge and in the programme.</p>
+      </header>
+      <form className={styles.profileForm} onSubmit={handleSave}>
+        <div className={styles.avatarColumn}>
+          {user.image ? (
+            // eslint-disable-next-line @next/next/no-img-element -- signed Convex storage URL
+            <img
+              src={user.image}
+              alt={`${user.firstName ?? "User"} profile`}
+              className={styles.avatar}
             />
-            <div className={styles.avatarActions}>
+          ) : (
+            <div className={styles.avatarPlaceholder}>
+              <i className="bx bx-user" aria-hidden="true" />
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            className={styles.hiddenFileInput}
+            type="file"
+            accept="image/*"
+            onChange={handleProfileImageChange}
+          />
+          <div className={styles.avatarActions}>
+            <Button
+              className="secondary sm"
+              type="button"
+              disabled={imageUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {imageUploading ? "Uploading…" : "Upload photo"}
+            </Button>
+            {user.profileImageId ? (
+              <Button
+                className="dangerText"
+                type="button"
+                disabled={imageUploading}
+                onClick={() => void handleRemoveProfileImage()}
+              >
+                Remove
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <div className={styles.fieldsColumn}>
+          <ProfileFields
+            idPrefix="profile"
+            values={values}
+            onChange={edit}
+            legacyAffiliation={
+              [user.department, user.institution].filter(Boolean).join(", ") ||
+              undefined
+            }
+          />
+        </div>
+        <footer className={styles.cardFooter}>
+          <PanelStatus
+            error={error}
+            success={saved && !dirty ? "Saved" : ""}
+            pending={dirty ? "You have unsaved changes." : ""}
+          />
+          <div className={styles.footerActions}>
+            {dirty ? (
               <Button
                 className="secondary"
                 type="button"
-                disabled={imageUploading}
-                onClick={() => fileInputRef.current?.click()}
+                disabled={saving}
+                onClick={discard}
               >
-                {imageUploading ? "Uploading…" : "Upload photo"}
+                Discard changes
               </Button>
-              {user.profileImageId ? (
-                <Button
-                  className="dangerText"
-                  type="button"
-                  disabled={imageUploading}
-                  onClick={() => void handleRemoveProfileImage()}
-                >
-                  Remove
-                </Button>
-              ) : null}
-            </div>
+            ) : null}
+            <Button className="green" disabled={saving || !dirty} type="submit">
+              {saving ? "Saving…" : "Save"}
+            </Button>
           </div>
-          <div className={styles.fieldsColumn}>
-            <div className={styles.grid}>
-              <SelectField
-                label="Prefix"
-                options={prefixOptions}
-                value={formValues.prefix}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    prefix: event.target.value as (typeof PREFIXES)[number],
-                  }))
-                }
-              />
-              <FormField
-                label="First name"
-                value={formValues.firstName}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    firstName: event.target.value,
-                  }))
-                }
-              />
-              <FormField
-                label="Last name"
-                value={formValues.lastName}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    lastName: event.target.value,
-                  }))
-                }
-              />
-              <FormField
-                label="Other name"
-                value={formValues.otherName}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    otherName: event.target.value,
-                  }))
-                }
-              />
-              <FormField
-                label="Suffix"
-                value={formValues.suffix}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    suffix: event.target.value,
-                  }))
-                }
-              />
-              <div className={styles.fullWidth}>
-                <AffiliationPicker
-                  label="Affiliation"
-                  value={formValues.affiliationId}
-                  onChange={(affiliationId) =>
-                    setDraft((current) => ({
-                      ...(current ?? formValues),
-                      affiliationId,
-                    }))
-                  }
-                />
-                {!formValues.affiliationId && user.institution ? (
-                  <p className={styles.legacyHint}>
-                    <i className="bx bx-alert-triangle" aria-hidden="true" />
-                    You previously entered “
-                    {[user.department, user.institution]
-                      .filter(Boolean)
-                      .join(", ")}
-                    ”. Please select it from the list, or add it if it is
-                    missing.
-                  </p>
-                ) : null}
-              </div>
-              <FormField
-                label="Position"
-                value={formValues.position}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...(current ?? formValues),
-                    position: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            {error ? <p className={styles.error}>{error}</p> : null}
-            <div className={styles.actions}>
-              <Button className="green" disabled={saving} type="submit">
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </section>
+        </footer>
+      </form>
+    </section>
+  );
+}
 
-      {/* Letters are not issued yet; pass the uploaded file's URL here. */}
-      <InvitationLetter />
-    </div>
+function EmailPreferences({ user }: { user: Doc<"users"> }) {
+  const updateNotificationPreference = useMutation(
+    api.users.updateNotificationPreference,
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function toggle(wantsNotifications: boolean) {
+    setError("");
+    setSaving(true);
+    try {
+      await updateNotificationPreference({ wantsNotifications });
+    } catch (caught) {
+      setError(errorMessage(caught, "Could not update your preference."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className={styles.card} aria-labelledby="email-preferences">
+      <header className={styles.cardHeader}>
+        <h2 id="email-preferences">Email preferences</h2>
+        <p>
+          Emails about your account and your abstracts are always sent. Changes
+          save straight away.
+        </p>
+      </header>
+      <CheckboxField
+        id="wants-notifications"
+        label="Send me conference announcements and updates by email."
+        checked={user.wantsNotifications ?? false}
+        disabled={saving}
+        onChange={(event) => void toggle(event.target.checked)}
+      />
+      {error ? (
+        <footer className={styles.cardFooter}>
+          <PanelStatus error={error} />
+        </footer>
+      ) : null}
+    </section>
+  );
+}
+
+function AccountSecurity({ email }: { email?: string }) {
+  const changePassword = useAction(api.users.changePassword);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const mismatch =
+    confirmPassword.length > 0 && newPassword !== confirmPassword;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSaved(false);
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await changePassword({ currentPassword, newPassword });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setSaved(true);
+    } catch (caught) {
+      setError(errorMessage(caught, "Could not change your password."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className={styles.card} aria-labelledby="account-security">
+      <header className={styles.cardHeader}>
+        <h2 id="account-security">Account security</h2>
+        <p>Change the password you use to sign in.</p>
+      </header>
+      <form onSubmit={handleSubmit}>
+        <div className={styles.securityFields}>
+          <FormField
+            id="account-email"
+            label="Email"
+            type="email"
+            value={email ?? ""}
+            hint="Contact the organisers to change the email on your account."
+            readOnly
+            disabled
+          />
+          <PasswordField
+            id="current-password"
+            label="Current password"
+            autoComplete="current-password"
+            required
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+          />
+          <PasswordField
+            id="new-password"
+            label="New password"
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            hint={`At least ${MIN_PASSWORD_LENGTH} characters. Other devices will be signed out.`}
+            required
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+          />
+          <PasswordField
+            id="confirm-new-password"
+            label="Confirm new password"
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            required
+            value={confirmPassword}
+            errorMessage={mismatch ? "Passwords do not match." : undefined}
+            aria-invalid={mismatch}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+          />
+        </div>
+        <footer className={styles.cardFooter}>
+          <PanelStatus
+            error={error}
+            success={saved ? "Password changed" : ""}
+          />
+          <div className={styles.footerActions}>
+            <Button className="green" type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Change password"}
+            </Button>
+          </div>
+        </footer>
+      </form>
+    </section>
+  );
+}
+
+/** The left side of a panel footer: an error, a confirmation or a reminder. */
+function PanelStatus({
+  error,
+  success,
+  pending,
+}: {
+  error?: string;
+  success?: string;
+  pending?: string;
+}) {
+  if (error) {
+    return (
+      <p
+        className={`${styles.panelStatus} ${styles.panelStatusError}`}
+        role="alert"
+      >
+        <i className="bx bx-alert-circle" aria-hidden="true" />
+        {error}
+      </p>
+    );
+  }
+  if (success) {
+    return (
+      <p
+        className={`${styles.panelStatus} ${styles.panelStatusSuccess}`}
+        role="status"
+      >
+        <i className="bx bx-check-circle" aria-hidden="true" />
+        {success}
+      </p>
+    );
+  }
+  return (
+    <p className={styles.panelStatus} role="status">
+      {pending}
+    </p>
   );
 }

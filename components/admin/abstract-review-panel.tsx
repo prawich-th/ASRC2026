@@ -1,6 +1,6 @@
 "use client";
 
-import { formatStudyType } from "@/lib/abstractForm";
+import { formatResearchCategory } from "@/lib/abstractForm";
 import AbstractPreview from "@/components/abstract-editor/abstract-preview";
 import Button from "@/components/form/button";
 import FilePreviewDrawer, { PreviewFile } from "./file-preview-drawer";
@@ -136,11 +136,11 @@ export default function AbstractReviewPanel({
             <dd>{detail.owner.name || detail.owner.email || "Unknown"}</dd>
           </div>
           <div>
-            <dt>Study type</dt>
+            <dt>Research category</dt>
             <dd>
-              {formatStudyType(
-                detail.abstract.studyType,
-                detail.abstract.studyTypeOther,
+              {formatResearchCategory(
+                detail.abstract.researchCategory,
+                detail.abstract.researchCategoryOther,
               ) ?? (
                 <span className={styles.notSpecified}>Not specified</span>
               )}

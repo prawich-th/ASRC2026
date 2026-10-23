@@ -67,8 +67,8 @@
     color: var(--surface);
 
     &:hover:not(:disabled) {
-      background-color: color-mix(in srgb, var(--green) 85%, var(--ink));
-      border-color: color-mix(in srgb, var(--green) 85%, var(--ink));
+      background-color: var(--green-deep);
+      border-color: var(--green-deep);
     }
   }
 

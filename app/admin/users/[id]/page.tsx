@@ -2,27 +2,21 @@
 
 import styles from "@/components/admin/admin.module.scss";
 import MailInboxAssignments from "@/components/admin/mail-inbox-assignments";
-import ProfileForm, {
-  ProfileFormValues,
-  profileValuesFromUser,
-  toProfileInput,
-} from "@/components/admin/profile-form";
+import ProfileForm from "@/components/admin/profile-form";
 import LoadingScreen from "@/components/layout/loading-screen";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { getRoleLabel } from "@/lib/adminRoles";
+import { errorMessage } from "@/lib/errorMessage";
+import {
+  ProfileFormValues,
+  profileValuesFromUser,
+  toProfileInput,
+} from "@/lib/profileForm";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-
-function errorMessage(caught: unknown, fallback: string) {
-  if (caught instanceof Error) {
-    const match = caught.message.match(/Uncaught Error: (.*?)(?:\n|$)/);
-    return match?.[1] ?? caught.message;
-  }
-  return fallback;
-}
 
 function formatDate(value?: number) {
   return value
@@ -138,10 +132,12 @@ export default function EditUserPage() {
           {notice ? <p className={styles.success}>{notice}</p> : null}
         </ProfileForm>
       </section>
-      {user.role ? <MailInboxAssignments
+      {user.role ? (
+        <MailInboxAssignments
           userId={user._id}
           staffPosition={user.staffPosition}
-        /> : null}
+        />
+      ) : null}
     </div>
   );
 }

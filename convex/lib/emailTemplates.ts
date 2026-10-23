@@ -293,25 +293,62 @@ function feedbackBlock(feedback: string): string {
 const OPTED_IN_FOOTER =
   "You are receiving conference updates because you opted in to email notifications.";
 
-export function verificationEmail(args: { token: string }): EmailContent {
-  const code = escapeHtml(args.token);
+type CodeEmailCopy = {
+  subject: string;
+  label: string;
+  heading: string;
+  intro: string;
+  codeLabel: string;
+};
+
+/** A one-time code email (sign-up verification, password reset). */
+function codeEmail(copy: CodeEmailCopy, token: string): EmailContent {
+  const code = escapeHtml(token);
+  const codeName = copy.codeLabel.toLowerCase();
   return {
-    subject: "Verify your ASRC 2027 account",
+    subject: copy.subject,
     html: brandedEmail({
-      preview: `Your ASRC 2027 verification code is ${args.token}.`,
-      label: "Email verification",
+      preview: `Your ASRC 2027 ${codeName} is ${token}.`,
+      label: copy.label,
       ring: "green",
-      heading: "Verify your email",
-      intro:
-        "Enter this code on the ASRC registration page to finish creating your account.",
+      heading: copy.heading,
+      intro: copy.intro,
       detailsHtml: `<div style="margin-top:24px;padding:24px 16px;border-radius:${t.radiusMd};background:${t.paperSunk};text-align:center;">
-        <div style="color:${t.inkMuted};font-size:12px;font-weight:600;letter-spacing:0.08em;line-height:1.4;text-transform:uppercase;">Verification code</div>
+        <div style="color:${t.inkMuted};font-size:12px;font-weight:600;letter-spacing:0.08em;line-height:1.4;text-transform:uppercase;">${escapeHtml(copy.codeLabel)}</div>
         <div style="margin-top:8px;color:${t.ink};font-size:40px;font-weight:600;letter-spacing:0.12em;line-height:1.1;font-variant-numeric:tabular-nums;">${code}</div>
       </div>
       <p style="margin:24px 0 0;color:${t.inkMuted};font-size:14px;line-height:1.5;">This code expires in <strong style="color:${t.ink};font-weight:600;">15 minutes</strong>. If you did not request it, you can safely ignore this email.</p>`,
     }),
-    text: `Your ASRC 2027 verification code is ${args.token}. It expires in 15 minutes.`,
+    text: `Your ASRC 2027 ${codeName} is ${token}. It expires in 15 minutes.`,
   };
+}
+
+export function verificationEmail(args: { token: string }): EmailContent {
+  return codeEmail(
+    {
+      subject: "Verify your ASRC 2027 account",
+      label: "Email verification",
+      heading: "Verify your email",
+      intro:
+        "Enter this code on the ASRC registration page to finish creating your account.",
+      codeLabel: "Verification code",
+    },
+    args.token,
+  );
+}
+
+export function passwordResetEmail(args: { token: string }): EmailContent {
+  return codeEmail(
+    {
+      subject: "Reset your ASRC 2027 password",
+      label: "Password reset",
+      heading: "Reset your password",
+      intro:
+        "Enter this code on the ASRC password reset page, then choose a new password.",
+      codeLabel: "Reset code",
+    },
+    args.token,
+  );
 }
 
 export function announcementEmail(args: {

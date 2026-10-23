@@ -69,7 +69,10 @@ export async function requireAffiliation(
   return affiliation;
 }
 
-/** Fields copied onto a user so search and imports keep working. */
+/**
+ * Fields copied onto a user so search and imports keep working. `city` is the
+ * participant's own `customCity` when they typed one, else the affiliation's.
+ */
 export function userAffiliationPatch(
   user: Doc<"users">,
   affiliation: Doc<"affiliations">,
@@ -77,7 +80,10 @@ export function userAffiliationPatch(
   const institution = affiliation.university;
   const department = affiliationUnit(affiliation);
   const city =
-    affiliation.province?.trim() || affiliation.district?.trim() || undefined;
+    user.customCity ||
+    affiliation.province?.trim() ||
+    affiliation.district?.trim() ||
+    undefined;
   return {
     affiliationId: affiliation._id,
     institution,

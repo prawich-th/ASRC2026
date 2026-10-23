@@ -1,224 +1,142 @@
+@use "sass:math";
+
+// Sign in and password reset: the conference panel (paper-sunk, rings, dome)
+// beside the form panel (paper). Under 900px the conference panel becomes a
+// short band above the form.
 .page {
-  position: relative;
-  isolation: isolate;
-  min-height: 100vh;
-  min-height: 100lvh;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  place-items: center;
-  gap: var(--space-12);
-  box-sizing: border-box;
-  padding: var(--space-12);
-  overflow: hidden;
-  background: var(--paper);
-  color: var(--ink);
-
-  @media (max-width: 899px) {
-    grid-template-columns: minmax(0, 28rem);
-    align-content: center;
-    justify-content: center;
-    gap: var(--space-6);
-    padding: max(var(--space-6), env(safe-area-inset-top))
-      max(var(--space-4), env(safe-area-inset-right))
-      max(var(--space-6), env(safe-area-inset-bottom))
-      max(var(--space-4), env(safe-area-inset-left));
-  }
-}
-
-.login {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: var(--space-4);
-  width: min(100%, 28rem);
-}
-
-.card {
-  box-sizing: border-box;
-  width: 100%;
-  padding: var(--space-8);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-
-  @media (max-width: 599px) {
-    padding: var(--space-6);
-  }
-
-  h1 {
-    margin: var(--space-4) 0 0;
-    font-size: 40px;
-    font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-  }
-
-  .logo {
-    display: block;
-    height: 72px;
-    width: auto;
-    margin-top: var(--space-6);
-  }
-
-  form {
-    display: grid;
-    gap: var(--space-4);
-    margin-top: var(--space-8);
-
-    p {
-      margin: 0;
-    }
-
-    button {
-      width: 100%;
-    }
-  }
-}
-
-.back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--ink-muted);
-  font-size: 14px;
-
-  &:hover {
-    color: var(--tu-red);
-    text-decoration: none;
-  }
-
-  i {
-    font-size: 16px;
-  }
-}
-
-.register {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  box-sizing: border-box;
-  padding: var(--space-4) var(--space-6);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-
-  p {
-    margin: 0;
-  }
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
 }
 
-.buttonLink {
-  display: inline-flex;
+// ---------------------------------------------------------------------------
+// Conference panel
 
-  &:hover {
-    text-decoration: none;
-  }
-}
-
-.info {
+.brand {
   position: relative;
-  z-index: 1;
-  justify-self: end;
-  display: grid;
-  justify-items: end;
-  gap: var(--space-6);
-  text-align: right;
+  isolation: isolate;
+  overflow: hidden;
+  flex: 1 1 640px;
+  min-width: 0;
+  min-height: 720px;
+  box-sizing: border-box;
+  padding: var(--space-12) 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 72px;
+  background: var(--paper-sunk);
 
-  .logos {
-    display: flex;
-    gap: var(--space-4);
-
-    img {
-      display: block;
-      height: 64px;
-      width: auto;
-    }
+  @media (max-width: 899px) {
+    flex-basis: 100%;
+    min-height: 0;
+    gap: var(--space-6);
+    padding: max(20px, env(safe-area-inset-top)) var(--gutter) var(--space-8);
   }
+}
 
-  .infoText {
-    display: grid;
-    gap: var(--space-1);
-  }
+.logos {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
 
-  h1 {
-    margin: 0 0 var(--space-2);
-    font-size: 40px;
-    font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-  }
-
-  p {
-    margin: 0;
-    color: var(--ink-muted);
-    font-size: 16px;
-    line-height: 1.5;
+  img {
+    display: block;
+    height: 44px;
+    width: auto;
   }
 
   @media (max-width: 899px) {
-    order: -1;
-    justify-self: center;
-    justify-items: center;
-    gap: var(--space-4);
-    text-align: center;
+    gap: 10px;
 
-    .logos img {
-      height: 44px;
-    }
-
-    h1 {
-      font-size: 28px;
-    }
-
-    p {
-      font-size: 14px;
+    img {
+      height: 30px;
     }
   }
-}
-
-.error {
-  margin: 0;
-  color: var(--tu-red-deep);
-  font-size: 14px;
 }
 
 .eyebrow {
-  margin: var(--space-8) 0 0;
+  margin: 0 0 var(--space-4);
   color: var(--ink-muted);
   font-size: 12px;
   font-weight: 600;
+  line-height: 1.4;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.intro {
-  margin: 0;
-  color: var(--ink-muted);
-}
+.theme {
+  display: flex;
+  flex-direction: column;
+  max-width: 440px;
 
-.switch {
-  display: block;
-  margin: var(--space-4) auto 0;
-  border: 0;
-  background: transparent;
-  color: var(--tu-red);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
+  h2 {
+    margin: 0;
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+  }
 
-  &:hover {
-    text-decoration: underline;
+  @media (max-width: 899px) {
+    display: none;
   }
 }
 
-// Three hero sweeps that bleed off the page edges, clear of the info text.
-// Written back to front: gray, orange, green.
+.subtitle {
+  max-width: 24ch;
+  margin: var(--space-4) 0 0;
+  font-size: 20px;
+  line-height: 1.45;
+}
+
+.when {
+  max-width: 40ch;
+  margin: var(--space-3) 0 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 1.5;
+
+  strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+}
+
+.compact {
+  display: none;
+  max-width: 240px;
+
+  .eyebrow {
+    margin-bottom: var(--space-2);
+  }
+
+  .when {
+    margin-top: 10px;
+  }
+
+  @media (max-width: 899px) {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.compactTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+// Hero sweeps, back to front: gray, orange, green. They bleed off the panel's
+// edges and stay inside it (overflow: hidden on .brand).
 .rings {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
 
   span {
@@ -235,25 +153,26 @@
   }
 
   .gray {
-    top: -820px;
-    left: -380px;
+    right: -640px;
+    bottom: -820px;
     border-color: var(--gray);
   }
 
   .orange {
-    bottom: -880px;
-    left: -620px;
+    bottom: -960px;
+    left: -700px;
     border-color: var(--orange);
     animation-delay: 0.08s;
   }
 
   .green {
-    right: -760px;
-    bottom: -820px;
+    top: -860px;
+    right: -820px;
     border-color: var(--green);
     animation-delay: 0.16s;
   }
 
+  // Small screens: the green ring and dome drop; gray and orange shrink.
   @media (max-width: 899px) {
     span {
       width: var(--ring-m);
@@ -261,19 +180,333 @@
     }
 
     .gray {
-      display: none;
+      top: -300px;
+      right: -310px;
+      bottom: auto;
     }
 
     .orange {
-      bottom: -300px;
-      left: -300px;
+      right: -250px;
+      bottom: -330px;
+      left: auto;
     }
 
     .green {
-      right: -300px;
-      bottom: -320px;
+      display: none;
     }
   }
+}
+
+.dome {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  // The PNG has 28 of its 1024px transparent on the right; shift that off the
+  // panel so the drawing meets its edge.
+  translate: math.div(28, 1024) * 100% 0;
+  // The dome (2:3) takes whatever width the theme column (56px padding,
+  // 440px text, 24px gap) leaves in the panel, which is 100vw minus the 520px
+  // form panel, so it never runs into the title.
+  height: min(88%, 720px, calc((100vw - 1040px) * 1.5));
+  width: auto;
+  filter: url(#auth-dome-keyline);
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: dome-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+  }
+
+  // Under this height the dome no longer reads as the dome, so drop it rather
+  // than show it shrunk. The panel is at least 720px tall, so the width term
+  // is what shrinks it; hide at the viewport width where it hits the minimum.
+  $min-height: 540px;
+  @media (max-width: #{1040px + math.div($min-height, 1.5) - 1px}) {
+    display: none;
+  }
+}
+
+.svgDefs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Form panel
+
+.formPanel {
+  flex: 0 1 520px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-8) var(--space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  background: var(--paper);
+
+  @media (max-width: 899px) {
+    flex: 1 1 100%;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--gutter)
+      max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+.topBar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 14px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-muted);
+
+  &:hover {
+    color: var(--tu-red);
+    text-decoration: none;
+  }
+
+  i {
+    font-size: 16px;
+  }
+}
+
+.topLink {
+  color: var(--ink-muted);
+
+  a {
+    color: var(--tu-red);
+    font-weight: 600;
+
+    &:hover {
+      color: var(--tu-red-deep);
+    }
+  }
+
+  // The form ends with its own account switch on small screens.
+  @media (max-width: 899px) {
+    display: none;
+  }
+}
+
+.formArea {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  @media (max-width: 899px) {
+    align-items: flex-start;
+  }
+}
+
+.formInner {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+
+  @media (max-width: 899px) {
+    max-width: none;
+    gap: var(--space-6);
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    @media (max-width: 899px) {
+      gap: var(--space-4);
+    }
+  }
+
+  // Full-width 48px actions, as in the sign-in design.
+  form > button {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  h1 {
+    margin: var(--space-2) 0 0;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 899px) {
+    gap: 6px;
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    p {
+      font-size: 15px;
+    }
+  }
+}
+
+.logo {
+  display: block;
+  height: 56px;
+  width: auto;
+  align-self: flex-start;
+
+  @media (max-width: 899px) {
+    display: none;
+  }
+}
+
+.forgot {
+  align-self: flex-end;
+  margin-top: -12px;
+  color: var(--tu-red);
+  font-size: 14px;
+  font-weight: 600;
+
+  &:hover {
+    color: var(--tu-red-deep);
+  }
+}
+
+.error {
+  margin: 0;
+  color: var(--tu-red-deep);
+  font-size: 14px;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--green-tint);
+  color: var(--green);
+  font-size: 14px;
+
+  i {
+    flex: none;
+    font-size: 18px;
+  }
+}
+
+// "First time at ASRC 2027?" between two hairlines.
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink-muted);
+  font-size: 14px;
+
+  &::before,
+  &::after {
+    content: "";
+    flex-grow: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  @media (max-width: 899px) {
+    display: none;
+  }
+}
+
+.secondaryLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: -12px;
+  box-sizing: border-box;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+
+  &:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  @media (max-width: 899px) {
+    display: none;
+  }
+}
+
+// Small screens swap the divider and outline button for one line of text.
+.switchLine {
+  display: none;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 15px;
+  text-align: center;
+
+  a {
+    color: var(--tu-red);
+    font-weight: 600;
+  }
+
+  @media (max-width: 899px) {
+    display: block;
+  }
+}
+
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  color: var(--ink-muted);
+  font-size: 13px;
+
+  a {
+    color: var(--ink-muted);
+
+    &:hover {
+      color: var(--tu-red);
+    }
+  }
+
+  @media (max-width: 899px) {
+    justify-content: center;
+
+    > span:first-child {
+      display: none;
+    }
+  }
+}
+
+.legalLinks {
+  display: flex;
+  gap: var(--space-4);
 }
 
 @keyframes ring-in {
@@ -284,5 +517,16 @@
   to {
     opacity: 1;
     scale: 1;
+  }
+}
+
+@keyframes dome-in {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

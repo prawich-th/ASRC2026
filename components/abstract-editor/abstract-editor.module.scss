@@ -879,7 +879,7 @@
   }
 }
 
-.studyTypes {
+.researchCategories {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: 0.5rem;
@@ -894,11 +894,11 @@
   }
 }
 
-.studyTypesInvalid label {
+.researchCategoriesInvalid label {
   border-color: var(--tu-red);
 }
 
-.studyTypeOption {
+.researchCategoryOption {
   display: flex;
   align-items: flex-start;
   gap: 0.55rem;
@@ -1005,7 +1005,7 @@
   }
 }
 
-.previewStudyType {
+.previewResearchCategory {
   margin: 0 0 var(--space-3);
   color: var(--ink-muted);
   font-size: 12px;

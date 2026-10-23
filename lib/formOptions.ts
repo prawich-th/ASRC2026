@@ -22,7 +22,19 @@ export const PARTICIPANT_CATEGORIES = [
 
 export const MEDICAL_STUDENT_YEARS = ["1", "2", "3", "4", "5", "6"] as const;
 
-export const ABSTRACT_STUDY_TYPES = [
+/** The research categories in the ASRC Academic Guidelines. */
+export const ABSTRACT_RESEARCH_CATEGORIES = [
+  "basic_biomedical",
+  "clinical_translational",
+  "public_health",
+  "medical_education",
+  "evidence_synthesis",
+  "innovation_technology",
+  "other",
+] as const;
+
+/** Study types asked for before research categories replaced them. */
+export const LEGACY_ABSTRACT_STUDY_TYPES = [
   "experimental",
   "observational",
   "in_silico",
@@ -58,3 +70,5 @@ export const ANNOUNCEMENT_TAG_TONES = [
 export const ANNOUNCEMENT_STATUSES = ["draft", "published"] as const;
 
 export const KEY_DATE_TONES = ["green", "orange", "red"] as const;
+
+export const MIN_PASSWORD_LENGTH = 8;

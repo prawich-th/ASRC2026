@@ -55,7 +55,10 @@ export const userFields = {
   position: v.optional(v.string()),
   department: v.optional(v.string()),
   participantCategory: v.optional(participantCategoryValidator),
+  /** Effective city: `customCity`, else derived from the affiliation. */
   city: v.optional(v.string()),
+  /** City the participant typed themselves; overrides the affiliation's. */
+  customCity: v.optional(v.string()),
   agreedToTerms: v.optional(v.boolean()),
   wantsNotifications: v.optional(v.boolean()),
   profileComplete: v.optional(v.boolean()),

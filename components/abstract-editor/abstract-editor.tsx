@@ -6,13 +6,13 @@ import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ABSTRACT_STEPS,
   AbstractStepKey,
-  AbstractStudyType,
+  AbstractResearchCategory,
   getAbstractProblems,
   MAX_ABSTRACT_TITLE_LENGTH,
-  MAX_STUDY_TYPE_OTHER_LENGTH,
-  STUDY_TYPE_LABELS,
+  MAX_RESEARCH_CATEGORY_OTHER_LENGTH,
+  RESEARCH_CATEGORY_LABELS,
 } from "@/lib/abstractForm";
-import { ABSTRACT_STUDY_TYPES } from "@/lib/formOptions";
+import { ABSTRACT_RESEARCH_CATEGORIES } from "@/lib/formOptions";
 import {
   ABSTRACT_WORD_LIMIT,
   countWords,
@@ -39,8 +39,8 @@ type CurrentUser = NonNullable<FunctionReturnType<typeof api.users.me>>;
 
 type FormState = {
   title: string;
-  studyType?: AbstractStudyType;
-  studyTypeOther: string;
+  researchCategory?: AbstractResearchCategory;
+  researchCategoryOther: string;
   keywords: string[];
   authors: AuthorRow[];
   advisor: string;
@@ -64,8 +64,8 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
     const abstract = detail.abstract;
     return {
       title: abstract.title,
-      studyType: abstract.studyType,
-      studyTypeOther: abstract.studyTypeOther ?? "",
+      researchCategory: abstract.researchCategory,
+      researchCategoryOther: abstract.researchCategoryOther ?? "",
       keywords: abstract.keywords,
       authors: (() => {
         const authors = (abstract.authorList ?? []).map((author) => newAuthorRow(author));
@@ -86,7 +86,7 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
   }
   return {
     title: "",
-    studyTypeOther: "",
+    researchCategoryOther: "",
     keywords: [],
     authors: [
       newAuthorRow({
@@ -104,8 +104,8 @@ function initialForm(detail: OwnerDetail | undefined, me: CurrentUser): FormStat
 function toPayload(form: FormState) {
   return {
     title: form.title,
-    studyType: form.studyType,
-    studyTypeOther: form.studyType === "other" ? form.studyTypeOther : undefined,
+    researchCategory: form.researchCategory,
+    researchCategoryOther: form.researchCategory === "other" ? form.researchCategoryOther : undefined,
     keywords: form.keywords,
     authorList: form.authors.map(({ name, affiliationId, facultyAdvisor }) => ({
       name,
@@ -191,8 +191,8 @@ export default function AbstractEditor({
   const wordCount = countWords(bodyText);
   const problems = getAbstractProblems({
     title: form.title,
-    studyType: form.studyType,
-    studyTypeOther: form.studyTypeOther,
+    researchCategory: form.researchCategory,
+    researchCategoryOther: form.researchCategoryOther,
     authorList: form.authors,
     advisor: form.advisor,
     advisorAffiliationId: form.advisorAffiliationId,
@@ -419,8 +419,9 @@ export default function AbstractEditor({
             <header className={styles.stepHeader}>
               <h2>Study details</h2>
               <p>
-                Give your research a clear, concise title, say what kind of
-                study it is, and add up to 10 keywords that describe it.
+                Give your research a clear, concise title, choose the research
+                category that best fits its main focus, and add up to 10
+                keywords that describe it.
               </p>
             </header>
             <div className={styles.fieldStack}>
@@ -447,45 +448,45 @@ export default function AbstractEditor({
                 </small>
               </label>
               <fieldset
-                className={`${styles.studyTypes} ${
-                  showErrors("details") && !form.studyType
-                    ? styles.studyTypesInvalid
+                className={`${styles.researchCategories} ${
+                  showErrors("details") && !form.researchCategory
+                    ? styles.researchCategoriesInvalid
                     : ""
                 }`}
               >
-                <legend>Type of study</legend>
-                {ABSTRACT_STUDY_TYPES.map((type) => (
-                  <label key={type} className={styles.studyTypeOption}>
+                <legend>Research category</legend>
+                {ABSTRACT_RESEARCH_CATEGORIES.map((value) => (
+                  <label key={value} className={styles.researchCategoryOption}>
                     <input
                       type="radio"
-                      name="abstract-study-type"
-                      value={type}
-                      checked={form.studyType === type}
-                      onChange={() => patch({ studyType: type })}
+                      name="abstract-research-category"
+                      value={value}
+                      checked={form.researchCategory === value}
+                      onChange={() => patch({ researchCategory: value })}
                     />
                     <span>
-                      {type === "other"
+                      {value === "other"
                         ? "Other (please specify)"
-                        : STUDY_TYPE_LABELS[type]}
+                        : RESEARCH_CATEGORY_LABELS[value]}
                     </span>
                   </label>
                 ))}
               </fieldset>
-              {form.studyType === "other" ? (
-                <label className={styles.field} htmlFor="abstract-study-type-other">
-                  <span>Please specify the type of study</span>
+              {form.researchCategory === "other" ? (
+                <label className={styles.field} htmlFor="abstract-research-category-other">
+                  <span>Please specify the research category</span>
                   <input
-                    id="abstract-study-type-other"
-                    maxLength={MAX_STUDY_TYPE_OTHER_LENGTH}
-                    value={form.studyTypeOther}
+                    id="abstract-research-category-other"
+                    maxLength={MAX_RESEARCH_CATEGORY_OTHER_LENGTH}
+                    value={form.researchCategoryOther}
                     autoFocus
                     className={
-                      showErrors("details") && !form.studyTypeOther.trim()
+                      showErrors("details") && !form.researchCategoryOther.trim()
                         ? styles.inputInvalid
                         : undefined
                     }
                     onChange={(event) =>
-                      patch({ studyTypeOther: event.target.value })
+                      patch({ researchCategoryOther: event.target.value })
                     }
                   />
                 </label>
@@ -612,8 +613,8 @@ export default function AbstractEditor({
               correspondingAuthor={authorName(me) || me.email}
               abstract={{
                 title: form.title,
-                studyType: form.studyType,
-                studyTypeOther: form.studyTypeOther,
+                researchCategory: form.researchCategory,
+                researchCategoryOther: form.researchCategoryOther,
                 authorList: form.authors,
                 advisor: form.advisor,
                 advisorAffiliationId: form.advisorAffiliationId,

@@ -1,0 +1,73 @@
+// Twelve columns so short fields (prefix, suffix) sit beside long ones:
+// prefix · first · other · last / suffix · specialty · phone /
+// category · position / affiliation / city.
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-4);
+
+  > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 899px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 599px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.span2 {
+  grid-column: span 2;
+}
+
+.span3 {
+  grid-column: span 3;
+}
+
+.span4 {
+  grid-column: span 4;
+}
+
+.span6 {
+  grid-column: span 6;
+}
+
+.span2,
+.span3,
+.span4,
+.span6 {
+  @media (max-width: 899px) {
+    grid-column: span 1;
+  }
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.hint,
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hint {
+  color: var(--ink-muted);
+}
+
+.warning {
+  color: var(--orange-deep);
+
+  i {
+    flex: none;
+    font-size: 16px;
+    line-height: 19px;
+  }
+}

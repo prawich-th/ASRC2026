@@ -1,29 +1,30 @@
 "use client";
 
-import AffiliationPicker from "@/components/affiliations/affiliation-picker";
 import Button from "@/components/form/button";
-import { CheckboxField, FormField, SelectField } from "@/components/form/Form";
+import { CheckboxField, FormField } from "@/components/form/Form";
 import Footer from "@/components/layout/footer";
 import Section, { sectionStyles } from "@/components/layout/section";
 import LoadingScreen from "@/components/layout/loading-screen";
+import ProfileFields from "@/components/profile/profile-fields";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { errorMessage } from "@/lib/errorMessage";
+import { MIN_PASSWORD_LENGTH } from "@/lib/formOptions";
 import {
-  MEDICAL_STUDENT_YEARS,
-  PARTICIPANT_CATEGORIES,
-  PREFIXES,
-} from "@/lib/formOptions";
+  ProfileFormValues,
+  profileValuesFromUser,
+  toProfileInput,
+} from "@/lib/profileForm";
+import { clearDraft, readDraft, writeDraft } from "@/lib/sessionDraft";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import styles from "./register.module.scss";
 
-function optionalValue(form: FormData, key: string) {
-  const value = String(form.get(key) ?? "").trim();
-  return value.length > 0 ? value : undefined;
-}
+/** The email waiting for its verification code, kept across a refresh. */
+const VERIFY_EMAIL_KEY = "asrc.register.verifyEmail";
+const profileDraftKey = (userId: string) => `asrc.register.profile.${userId}`;
 
 export default function RegisterPage() {
   const { signIn } = useAuthActions();
@@ -34,19 +35,51 @@ export default function RegisterPage() {
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState(
+    () => readDraft<string>(VERIFY_EMAIL_KEY) ?? "",
+  );
   const [pendingPassword, setPendingPassword] = useState("");
+  const [askPasswordToResend, setAskPasswordToResend] = useState(false);
   const [codeSentMessage, setCodeSentMessage] = useState("");
-  const [participantCategory, setParticipantCategory] = useState("");
-  const [affiliationId, setAffiliationId] = useState<Id<"affiliations">>();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [profileDraft, setProfileDraft] = useState<ProfileFormValues | null>(
+    null,
+  );
 
-  const isMedicalStudent = participantCategory === "Medical Student";
+  const passwordMismatch =
+    confirmPassword.length > 0 && password !== confirmPassword;
+
+  // Step 2 starts from an unsent draft, else from anything already on the
+  // account (pre-registered participants arrive with most fields filled).
+  const savedDraft = useMemo(
+    () =>
+      user ? readDraft<ProfileFormValues>(profileDraftKey(user._id)) : null,
+    [user],
+  );
+  const profileValues =
+    profileDraft ?? savedDraft ?? profileValuesFromUser(user);
+
+  function updateProfileDraft(values: ProfileFormValues) {
+    setProfileDraft(values);
+    if (user) {
+      writeDraft(profileDraftKey(user._id), values);
+    }
+  }
 
   useEffect(() => {
     if (user?.profileComplete) {
       router.replace("/");
     }
   }, [user, router]);
+
+  useEffect(() => {
+    // Once signed in, the pending verification is over.
+    if (isAuthenticated) {
+      clearDraft(VERIFY_EMAIL_KEY);
+    }
+  }, [isAuthenticated]);
 
   const waitingForUser = isAuthenticated && user === undefined;
   const step = isAuthenticated && user && !user.profileComplete ? 2 : 1;
@@ -55,10 +88,7 @@ export default function RegisterPage() {
     event.preventDefault();
     setError("");
 
-    const form = event.currentTarget;
-    const payload = new FormData(form);
-    const password = String(payload.get("password") ?? "");
-    const confirmPassword = String(payload.get("confirmPassword") ?? "");
+    const payload = new FormData(event.currentTarget);
     const agreedToTerms = payload.has("agreedToTerms");
 
     if (password !== confirmPassword) {
@@ -81,13 +111,13 @@ export default function RegisterPage() {
 
     try {
       await signIn("password", payload);
-      setVerificationEmail(String(payload.get("email") ?? "").trim());
+      const email = String(payload.get("email") ?? "").trim();
+      setVerificationEmail(email);
+      writeDraft(VERIFY_EMAIL_KEY, email);
       setPendingPassword(password);
       setCodeSentMessage("A verification code was sent to your email.");
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Could not create account",
-      );
+      setError(errorMessage(caught, "Could not create account."));
     } finally {
       setSubmitting(false);
     }
@@ -104,73 +134,68 @@ export default function RegisterPage() {
     try {
       await signIn("password", form);
       setPendingPassword("");
+      clearDraft(VERIFY_EMAIL_KEY);
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Could not verify this email",
-      );
+      setError(errorMessage(caught, "Could not verify this email."));
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function resendVerificationCode() {
+  /**
+   * Sending a new code means signing in again, which needs the password. It
+   * is only kept in memory, so after a refresh we ask for it.
+   */
+  async function resendVerificationCode(passwordForResend = pendingPassword) {
+    if (!passwordForResend) {
+      setAskPasswordToResend(true);
+      return;
+    }
     setError("");
     setCodeSentMessage("");
     setSubmitting(true);
     const form = new FormData();
     form.set("flow", "signIn");
     form.set("email", verificationEmail);
-    form.set("password", pendingPassword);
+    form.set("password", passwordForResend);
     try {
       await signIn("password", form);
+      setPendingPassword(passwordForResend);
+      setAskPasswordToResend(false);
       setCodeSentMessage("A new verification code was sent.");
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Could not resend the verification code",
-      );
+      setError(errorMessage(caught, "Could not resend the verification code."));
     } finally {
       setSubmitting(false);
     }
   }
 
+  function startWithDifferentEmail() {
+    clearDraft(VERIFY_EMAIL_KEY);
+    setVerificationEmail("");
+    setPendingPassword("");
+    setAskPasswordToResend(false);
+    setCodeSentMessage("");
+    setError("");
+  }
+
   async function handlePersonalInformation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    if (!affiliationId) {
-      setError("Please select your affiliation.");
+    const result = toProfileInput(profileValues);
+    if ("error" in result) {
+      setError(result.error);
       return;
     }
     setSubmitting(true);
-
-    const form = new FormData(event.currentTarget);
-    const selectedParticipantCategory = String(
-      form.get("participantCategory"),
-    ) as (typeof PARTICIPANT_CATEGORIES)[number];
-
     try {
-      await completeProfile({
-        prefix: String(form.get("prefix")) as (typeof PREFIXES)[number],
-        firstName: String(form.get("firstName") ?? "").trim(),
-        otherName: optionalValue(form, "otherName"),
-        lastName: String(form.get("lastName") ?? "").trim(),
-        suffix: optionalValue(form, "suffix"),
-        specialty: optionalValue(form, "specialty"),
-        phone: String(form.get("phone") ?? "").trim(),
-        affiliationId,
-        position: optionalValue(form, "position"),
-        participantCategory: selectedParticipantCategory,
-      });
+      await completeProfile(result.input);
+      if (user) {
+        clearDraft(profileDraftKey(user._id));
+      }
       router.replace("/");
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Could not save your information",
-      );
+      setError(errorMessage(caught, "Could not save your information."));
     } finally {
       setSubmitting(false);
     }
@@ -262,14 +287,48 @@ export default function RegisterPage() {
                   </Button>
                   <Button
                     type="button"
-                    disabled={submitting || !pendingPassword}
+                    className="secondary"
+                    disabled={submitting}
                     onClick={() => void resendVerificationCode()}
                   >
                     Resend code
                   </Button>
                 </div>
+                {askPasswordToResend ? (
+                  <div className={styles.resendPassword}>
+                    <FormField
+                      id="resend-password"
+                      label="Password"
+                      name="resendPassword"
+                      type="password"
+                      autoComplete="current-password"
+                      hint="Enter the password you chose so we can send a new code."
+                      minLength={MIN_PASSWORD_LENGTH}
+                    />
+                    <Button
+                      type="button"
+                      className="secondary"
+                      disabled={submitting}
+                      onClick={(event) => {
+                        const input = event.currentTarget.form?.elements.namedItem(
+                          "resendPassword",
+                        ) as HTMLInputElement | null;
+                        void resendVerificationCode(input?.value ?? "");
+                      }}
+                    >
+                      Send new code
+                    </Button>
+                  </div>
+                ) : null}
                 <p className={styles.otpHelp}>
-                  Check your spam folder if you don&apos;t see the email.
+                  Check your spam folder if you don&apos;t see the email.{" "}
+                  <button
+                    type="button"
+                    className={styles.linkButton}
+                    onClick={startWithDifferentEmail}
+                  >
+                    Use a different email
+                  </button>
                 </p>
               </section>
             </form>
@@ -288,18 +347,33 @@ export default function RegisterPage() {
                   <FormField
                     label="Password"
                     name="password"
-                    type="password"
+                    type={showPasswords ? "text" : "password"}
                     autoComplete="new-password"
-                    minLength={8}
+                    minLength={MIN_PASSWORD_LENGTH}
+                    hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
                     required
                   />
                   <FormField
                     label="Confirm password"
                     name="confirmPassword"
-                    type="password"
+                    type={showPasswords ? "text" : "password"}
                     autoComplete="new-password"
-                    minLength={8}
+                    minLength={MIN_PASSWORD_LENGTH}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    errorMessage={
+                      passwordMismatch ? "Passwords do not match." : undefined
+                    }
+                    aria-invalid={passwordMismatch}
                     required
+                  />
+                  <CheckboxField
+                    id="show-passwords"
+                    label="Show passwords"
+                    checked={showPasswords}
+                    onChange={(event) => setShowPasswords(event.target.checked)}
                   />
                 </div>
               </section>
@@ -322,7 +396,11 @@ export default function RegisterPage() {
                   name="wantsNotifications"
                   label="I want to receive notification regarding this conference via email."
                 />
-                {error ? <p className={styles.error}>{error}</p> : null}
+                {error ? (
+                  <p className={styles.error} role="alert">
+                    {error}
+                  </p>
+                ) : null}
                 <Button className="primary" type="submit" disabled={submitting}>
                   {submitting ? "Please wait…" : "Create account"}
                 </Button>
@@ -338,109 +416,21 @@ export default function RegisterPage() {
                 {user?.email ? (
                   <p className={styles.signedInAs}>Signed in as {user.email}</p>
                 ) : null}
-                <div className={styles.personalGrid}>
-                  <SelectField
-                    className={styles.field}
-                    label="Prefix"
-                    name="prefix"
-                    defaultValue=""
-                    required
-                    placeholder="Select"
-                    options={PREFIXES.map((value) => ({ value, label: value }))}
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="First name"
-                    name="firstName"
-                    type="text"
-                    required
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="Other name"
-                    name="otherName"
-                    type="text"
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="Last name"
-                    name="lastName"
-                    type="text"
-                    required
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="Suffix"
-                    name="suffix"
-                    type="text"
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="Specialty"
-                    name="specialty"
-                    type="text"
-                  />
-                  <FormField
-                    className={styles.field}
-                    label="Phone number"
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    required
-                  />
-                  <SelectField
-                    className={styles.field}
-                    label="Participant category"
-                    name="participantCategory"
-                    defaultValue=""
-                    required
-                    placeholder="Select"
-                    onChange={(event) =>
-                      setParticipantCategory(event.target.value)
-                    }
-                    options={PARTICIPANT_CATEGORIES.map((value) => ({
-                      value,
-                      label: value,
-                    }))}
-                  />
-                  <div className={`${styles.field} ${styles.institutionField}`}>
-                    <AffiliationPicker
-                      label="Affiliation"
-                      placeholder="Search your university, faculty, or department"
-                      value={affiliationId}
-                      onChange={setAffiliationId}
-                    />
-                    <p className={styles.fieldHint}>
-                      {isMedicalStudent
-                        ? "Choose your medical school. "
-                        : ""}
-                      Can&apos;t find it? Choose “Add a new affiliation” at the
-                      bottom of the list.
-                    </p>
-                  </div>
-                  {isMedicalStudent ? (
-                    <SelectField
-                      className={styles.field}
-                      label="Year"
-                      name="position"
-                      defaultValue=""
-                      required
-                      placeholder="Select"
-                      options={MEDICAL_STUDENT_YEARS.map((value) => ({
-                        value,
-                        label: value,
-                      }))}
-                    />
-                  ) : (
-                    <FormField
-                      className={styles.field}
-                      label="Position"
-                      name="position"
-                      type="text"
-                    />
-                  )}
-                </div>
-                {error ? <p className={styles.error}>{error}</p> : null}
+                <ProfileFields
+                  idPrefix="register"
+                  values={profileValues}
+                  onChange={updateProfileDraft}
+                  legacyAffiliation={
+                    [user?.department, user?.institution]
+                      .filter(Boolean)
+                      .join(", ") || undefined
+                  }
+                />
+                {error ? (
+                  <p className={styles.error} role="alert">
+                    {error}
+                  </p>
+                ) : null}
                 <div className={styles.actions}>
                   <Button
                     className="primary"

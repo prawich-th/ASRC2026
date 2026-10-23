@@ -4,117 +4,86 @@ import StaticPage from "@/components/static-page/static-page";
 export const metadata: Metadata = {
   title: "About Us | ASRC 2027",
   description:
-    "Learn about ASRC, its objectives, and the interdisciplinary vision of ASRC 2027.",
+    "Learn about ASRC, its host CICM at Thammasat University, and its mission and vision.",
 };
-
-const objectives = [
-  {
-    title: "Advance student research",
-    body: "Encourage students to participate in research and develop projects that contribute to medical and scientific knowledge.",
-  },
-  {
-    title: "Promote interdisciplinary collaboration",
-    body: "Provide opportunities for students from different medical, scientific, technological, and healthcare disciplines to exchange ideas and work together.",
-  },
-  {
-    title: "Develop academic and research skills",
-    body: "Strengthen students’ abilities in scientific writing, research methodology, critical appraisal, data interpretation, and academic presentation.",
-  },
-  {
-    title: "Encourage innovation in healthcare",
-    body: "Support research and innovative ideas that may contribute to improvements in healthcare, medical education, technology, and patient outcomes.",
-  },
-  {
-    title: "Build a research community",
-    body: "Create connections between students, faculty members, researchers, and institutions that can lead to future academic and research collaborations.",
-  },
-];
 
 export default function AboutUsPage() {
   return (
     <StaticPage title="About us" document split>
       <p>
-        ASRC is an academic and research initiative of the Chulabhorn
-        International College of Medicine (CICM), Thammasat University,
-        created to provide students with a platform to develop, present, and
-        exchange research ideas across medical and health-related disciplines.
-      </p>
-      <p>
-        ASRC aims to foster a strong research culture within the CICM community
-        by encouraging students to explore scientific questions, apply
-        evidence-based thinking, and communicate their findings in a
-        professional academic setting.
-      </p>
-      <p>
-        Beyond presenting research, ASRC serves as a space where students,
-        faculty members, researchers, and professionals can connect, exchange
-        perspectives, and explore opportunities for future interdisciplinary
-        collaboration.
+        The Annual Student Research Conference (ASRC) is an academic conference
+        hosted by the Chulabhorn International College of Medicine (CICM),
+        Thammasat University, dedicated to fostering research, scientific
+        inquiry, and academic collaboration among medical students.
       </p>
 
-      <h2>ASRC objectives</h2>
-      <p>ASRC aims to:</p>
-      {objectives.map((objective) => (
-        <section key={objective.title}>
-          <h3>{objective.title}</h3>
-          <p>{objective.body}</p>
-        </section>
-      ))}
-
-      <h2>Theme and vision of ASRC 2027</h2>
-      <h3>
-        Medical Interdisciplinary Advancement: Bridging Knowledge, Innovation,
-        and Patient Care
-      </h3>
+      <h2>About ASRC</h2>
       <p>
-        Modern medicine is no longer shaped by a single discipline. Advances
-        in healthcare increasingly emerge from collaboration between medicine,
-        biomedical sciences, public health, engineering, technology,
-        artificial intelligence, behavioral sciences, and many other fields.
+        ASRC provides a platform for aspiring physician-researchers to present
+        their work through oral and poster presentations, exchange ideas, and
+        engage in meaningful scientific discussions. By bringing together
+        students from CICM and other medical schools, the conference aims to
+        encourage interdisciplinary learning, promote the sharing of
+        knowledge, and strengthen the research community among future
+        healthcare professionals.
       </p>
       <p>
-        The theme of ASRC 2027, “Medical Interdisciplinary Advancement,”
-        reflects our vision of bringing these perspectives together to address
-        increasingly complex challenges in healthcare.
+        We believe that research is an essential part of medical advancement.
+        By empowering medical students to explore questions, challenge existing
+        knowledge, and communicate their findings, ASRC seeks to cultivate
+        curiosity, critical thinking, and a commitment to evidence-based
+        medicine.
       </p>
       <p>
-        Through research, innovation, and interdisciplinary collaboration, ASRC
-        2027 seeks to encourage students to look beyond traditional academic
-        boundaries and explore how different fields can work together to
-        advance medical knowledge and improve patient care.
+        Through the exchange of ideas and the presentation of student-led
+        research, ASRC aspires to inspire the next generation of medical
+        professionals to contribute to scientific discovery and the
+        advancement of healthcare.
       </p>
 
-      <h2>Interdisciplinary academic community</h2>
+      <h2>About CICM and Thammasat University</h2>
       <p>
-        ASRC brings together students, educators, researchers, and
-        professionals with diverse academic backgrounds, creating an
-        environment where different perspectives can contribute to solving
-        medical and healthcare challenges.
+        The University Council at the 8th Annual Meeting held on August 20,
+        2012 established the International College of Medicine. It was
+        developed with the purpose of educating advanced professionals in the
+        fields of medical science and research while playing a key role in
+        Thailand’s art and cultural evolution with the integration of English
+        as its primary language of education.
+      </p>
+      <p>
+        The College of Medicine was delegated as a prominent faculty amongst
+        its fellow institutions within Thammasat University. The college is
+        managed independently under the provisions within Thammasat
+        University’s regulatory council including its accreditation status as
+        a collegiate institution.
+      </p>
+      <p>
+        The College was granted the name of Chulabhorn Medical University
+        (Chulabhorn International College of Medicine) by Her Royal Highness
+        Princess Chulabhorn in the royal books dated May 8, 2013.
       </p>
 
-      <h2>Commitment to innovation and research</h2>
+      <h2>Our mission</h2>
       <p>
-        ASRC encourages participants to explore new ideas, technologies,
-        research methods, and approaches that may contribute to the advancement
-        of healthcare and medical science.
-      </p>
-      <p>
-        Research presented at ASRC may range from fundamental and clinical
-        sciences to public health, medical education, healthcare technology,
-        artificial intelligence, engineering, and interdisciplinary
-        innovation.
+        To provide an inclusive academic platform that empowers medical
+        students to share their research, develop their scientific
+        communication skills, and engage in meaningful academic exchange.
       </p>
 
-      <h2>Networking and collaboration opportunities</h2>
+      <h2>Our vision</h2>
       <p>
-        ASRC is designed not only as a research presentation platform but also
-        as an opportunity to connect.
+        To cultivate a collaborative and research-driven community of future
+        healthcare professionals who contribute to medical knowledge,
+        innovation, and improved health outcomes.
       </p>
+
+      <h2>Who can participate</h2>
       <p>
-        Participants can exchange ideas with fellow students, researchers,
-        faculty members, and professionals, opening opportunities for
-        mentorship, interdisciplinary projects, and future research
-        collaborations.
+        ASRC welcomes eligible medical students from CICM, Thammasat
+        University, and other medical schools to share their research through
+        oral and poster presentations. The conference encourages students to
+        connect with fellow researchers, gain valuable academic experience,
+        and become active contributors to the advancement of medical science.
       </p>
     </StaticPage>
   );
