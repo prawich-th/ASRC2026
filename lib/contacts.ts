@@ -9,8 +9,8 @@ export const CONTACTS: ContactItem[] = [
   {
     icon: "bx bx-envelope",
     label: "Email",
-    lines: ["smomedcicm+asrc@gmail.com"],
-    href: "mailto:smomedcicm+asrc@gmail.com",
+    lines: ["pr@cicmasrc.org"],
+    href: "mailto:pr@cicmasrc.org",
   },
   {
     icon: "bx bx-map",

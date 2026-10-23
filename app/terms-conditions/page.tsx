@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "The terms that govern your use of the ASRC 2027 website and abstract submission portal.",
 };
 
-const CONTACT_EMAIL = "smomedcicm+asrc@gmail.com";
+const CONTACT_EMAIL = "pr@cicmasrc.org";
 
 export default function TermsPage() {
   return (

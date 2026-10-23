@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "How the ASRC 2027 organisers collect, use, share and protect your personal data under Thailand's PDPA.",
 };
 
-const CONTACT_EMAIL = "smomedcicm+asrc@gmail.com";
+const CONTACT_EMAIL = "pr@cicmasrc.org";
 
 export default function PrivacyPage() {
   return (
