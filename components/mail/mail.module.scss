@@ -718,3 +718,168 @@
   align-items: center;
   gap: var(--space-3);
 }
+
+// Scheduled send picker in the composer
+.schedulePanel {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+
+  legend {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+
+.schedulePresets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-2);
+
+  button {
+    display: grid;
+    gap: 2px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    font: 600 14px/1.4 var(--font-sans);
+    text-align: left;
+    cursor: pointer;
+
+    small {
+      color: var(--ink-muted);
+      font-weight: 400;
+    }
+
+    &:hover {
+      border-color: var(--line-strong);
+    }
+
+    &[aria-pressed="true"] {
+      border-color: var(--green);
+      box-shadow: inset 0 0 0 1px var(--green);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.scheduleTime.scheduleTime {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 280px;
+  font-size: 14px;
+  font-weight: 600;
+
+  input {
+    height: 44px;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    font: 400 15px/1 var(--font-sans);
+
+    &:hover {
+      border-color: var(--line-strong);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.scheduleHint {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+// Scheduled folder and the thread page's scheduled replies
+.scheduledList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+
+  > li + li {
+    border-top: 1px solid var(--line);
+  }
+}
+
+.scheduledRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.scheduledMain {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 320px;
+  min-width: 0;
+
+  strong {
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--ink-muted);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.scheduledWhen {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scheduledError {
+  color: var(--tu-red-deep);
+}
+
+.scheduledActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+
+  input {
+    height: 36px;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    font: 400 14px/1 var(--font-sans);
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+  }
+}

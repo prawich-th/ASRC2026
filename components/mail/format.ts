@@ -45,3 +45,42 @@ export function displayAddress(value: string) {
   const match = value.match(/^\s*"?([^"<]+?)"?\s*<[^>]+>\s*$/);
   return match?.[1] ?? value;
 }
+
+function pad(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+/** Local time as a `datetime-local` input value. */
+export function toDateTimeInput(date: Date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Parses a `datetime-local` value in the browser's time zone. */
+export function fromDateTimeInput(value: string): number | undefined {
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : undefined;
+}
+
+function atHour(base: Date, daysAhead: number, hour: number) {
+  const date = new Date(base);
+  date.setDate(date.getDate() + daysAhead);
+  date.setHours(hour, 0, 0, 0);
+  return date;
+}
+
+/** Quick picks for scheduled send, all in the future. */
+export function schedulePresets(now: Date): { label: string; at: Date }[] {
+  const presets = [];
+  const thisAfternoon = atHour(now, 0, 13);
+  if (thisAfternoon.getTime() - now.getTime() > 30 * 60 * 1000) {
+    presets.push({ label: "This afternoon", at: thisAfternoon });
+  }
+  presets.push({ label: "Tomorrow morning", at: atHour(now, 1, 8) });
+  presets.push({ label: "Tomorrow afternoon", at: atHour(now, 1, 13) });
+  // Next Monday, or the one after if today is Sunday (tomorrow is covered).
+  const untilMonday = ((8 - now.getDay()) % 7) || 7;
+  if (untilMonday > 1) {
+    presets.push({ label: "Monday morning", at: atHour(now, untilMonday, 8) });
+  }
+  return presets;
+}

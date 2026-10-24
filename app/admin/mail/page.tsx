@@ -4,9 +4,10 @@ import adminStyles from "@/components/admin/admin.module.scss";
 import { useUrlFilters } from "@/components/admin/use-url-filters";
 import Button from "@/components/form/button";
 import LoadingScreen from "@/components/layout/loading-screen";
-import { displayAddress, formatMailDate } from "@/components/mail/format";
+import { displayAddress, formatFullDate, formatMailDate } from "@/components/mail/format";
 import MailComposer from "@/components/mail/mail-composer";
 import styles from "@/components/mail/mail.module.scss";
+import ScheduledList from "@/components/mail/scheduled-list";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { errorMessage } from "@/components/mail/format";
@@ -19,11 +20,13 @@ const FILTER_KEYS = ["inbox", "folder"] as const;
 const FOLDERS = [
   { id: "inbox", label: "Inbox", icon: "bx-inbox" },
   { id: "sent", label: "Sent", icon: "bx-send" },
+  { id: "scheduled", label: "Scheduled", icon: "bx-clock" },
   { id: "archive", label: "Archive", icon: "bx-archive" },
   { id: "spam", label: "Spam", icon: "bx-alert-octagon" },
   { id: "trash", label: "Trash", icon: "bx-trash" },
 ] as const;
 type FolderId = (typeof FOLDERS)[number]["id"];
+type ThreadFolderId = Exclude<FolderId, "scheduled">;
 
 const PAGE_SIZE = 25;
 
@@ -150,9 +153,13 @@ function Mailbox() {
           key={inbox._id}
           mode={{ kind: "compose", inboxId: inbox._id }}
           onCancel={() => setComposing(false)}
-          onSent={() => {
+          onSent={(sendAt) => {
             setComposing(false);
-            setNotice(`Sent from ${inbox.address}.`);
+            setNotice(
+              sendAt
+                ? `Scheduled to send from ${inbox.address} on ${formatFullDate(sendAt)}.`
+                : `Sent from ${inbox.address}.`,
+            );
           }}
         />
       ) : null}
@@ -174,7 +181,11 @@ function Mailbox() {
         ))}
       </div>
 
-      <ThreadList key={`${inbox._id}:${folder}`} inboxId={inbox._id} folder={folder} />
+      {folder === "scheduled" ? (
+        <ScheduledList key={inbox._id} inboxId={inbox._id} />
+      ) : (
+        <ThreadList key={`${inbox._id}:${folder}`} inboxId={inbox._id} folder={folder} />
+      )}
     </section>
   );
 }
@@ -184,7 +195,7 @@ function ThreadList({
   folder,
 }: {
   inboxId: Id<"mailInboxes">;
-  folder: FolderId;
+  folder: ThreadFolderId;
 }) {
   const threads = usePaginatedQuery(
     api.mail.listThreads,

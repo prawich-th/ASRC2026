@@ -7,6 +7,7 @@ import { announcementFields, keyDateFields } from "./lib/content";
 import {
   mailInboxFields,
   mailInboxMemberFields,
+  mailScheduledEmailFields,
   mailThreadFields,
   mailUploadFields,
   mailWebhookEventFields,
@@ -75,6 +76,10 @@ export default defineSchema({
   mailUploads: defineTable(mailUploadFields).index("by_storageId", [
     "storageId",
   ]),
+  mailScheduledEmails: defineTable(mailScheduledEmailFields).index(
+    "by_inboxId_and_sendAt",
+    ["inboxId", "sendAt"],
+  ),
   mailWebhookEvents: defineTable(mailWebhookEventFields).index("by_svixId", [
     "svixId",
   ]),

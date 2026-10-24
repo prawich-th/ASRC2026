@@ -12,6 +12,7 @@ import {
 import MailComposer, { ComposerMode } from "@/components/mail/mail-composer";
 import styles from "@/components/mail/mail.module.scss";
 import MessageBody from "@/components/mail/message-body";
+import ScheduledList from "@/components/mail/scheduled-list";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { FunctionReturnType } from "convex/server";
@@ -37,6 +38,7 @@ export default function MailThreadPage() {
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
   const [composer, setComposer] = useState<ComposerMode | null>(null);
+  const [notice, setNotice] = useState("");
   const emailCount = data?.thread.emailCount;
 
   // Reload whenever the cached email count changes (new mail via webhook).
@@ -130,6 +132,7 @@ export default function MailThreadPage() {
           ? last.replyTo
           : [last.from]
         : last.to;
+    setNotice("");
     setComposer({
       kind,
       inboxId: inbox._id,
@@ -235,12 +238,17 @@ export default function MailThreadPage() {
           </ol>
         )}
 
+        <ScheduledList inboxId={inbox._id} threadId={thread._id} />
+        {notice ? <p className={adminStyles.success}>{notice}</p> : null}
         {composer ? (
           <MailComposer
             key={`${composer.kind}:${"emailId" in composer ? composer.emailId : ""}`}
             mode={composer}
             onCancel={() => setComposer(null)}
-            onSent={() => setComposer(null)}
+            onSent={(sendAt) => {
+              setComposer(null);
+              setNotice(sendAt ? `Scheduled to send on ${formatFullDate(sendAt)}.` : "");
+            }}
           />
         ) : last ? (
           <div className={styles.replyBar}>
