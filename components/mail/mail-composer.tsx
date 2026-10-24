@@ -11,7 +11,14 @@ import {
 } from "@/lib/richDocument";
 import { useAction, useMutation } from "convex/react";
 import { useId, useState } from "react";
-import { errorMessage, formatBytes } from "./format";
+import {
+  errorMessage,
+  formatBytes,
+  formatFullDate,
+  fromDateTimeInput,
+  schedulePresets,
+  toDateTimeInput,
+} from "./format";
 import styles from "./mail.module.scss";
 import RecipientInput, { Recipient } from "./recipient-input";
 
@@ -62,7 +69,8 @@ export default function MailComposer({
 }: {
   mode: ComposerMode;
   onCancel: () => void;
-  onSent: () => void;
+  /** `sendAt` is set when the email was scheduled rather than sent. */
+  onSent: (sendAt?: number) => void;
 }) {
   const compose = useAction(api.mailActions.compose);
   const reply = useAction(api.mailActions.reply);
@@ -84,6 +92,8 @@ export default function MailComposer({
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  // Local "YYYY-MM-DDTHH:mm" while the schedule panel is open, else null.
+  const [sendAtInput, setSendAtInput] = useState<string | null>(null);
   // Reused across retries of the same message so Resend never sends twice;
   // any edit starts a new one.
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
@@ -164,6 +174,15 @@ export default function MailComposer({
       return;
     }
     const ccList = emails(cc);
+    let sendAt: number | undefined;
+    if (sendAtInput !== null) {
+      sendAt = fromDateTimeInput(sendAtInput);
+      if (sendAt === undefined || sendAt <= Date.now()) {
+        setError("Pick a send time in the future.");
+        setSending(false);
+        return;
+      }
+    }
     try {
       if (mode.kind === "compose") {
         await compose({
@@ -175,6 +194,7 @@ export default function MailComposer({
           uploadIds,
           signature,
           requestId,
+          sendAt,
         });
       } else if (mode.kind === "forward") {
         await forward({
@@ -186,6 +206,7 @@ export default function MailComposer({
           uploadIds,
           signature,
           requestId,
+          sendAt,
         });
       } else {
         await reply({
@@ -197,9 +218,10 @@ export default function MailComposer({
           uploadIds,
           signature,
           requestId,
+          sendAt,
         });
       }
-      onSent();
+      onSent(sendAt);
     } catch (caught) {
       setError(errorMessage(caught, "Could not send the email."));
     } finally {
@@ -215,6 +237,8 @@ export default function MailComposer({
   }
 
   const busy = sending || uploading;
+  const scheduledAt = sendAtInput === null ? undefined : fromDateTimeInput(sendAtInput);
+  const sendLabel = sendAtInput === null ? "Send" : "Schedule send";
 
   return (
     <form className={styles.composer} onSubmit={(event) => void send(event)}>
@@ -287,6 +311,42 @@ export default function MailComposer({
           ))}
         </ul>
       ) : null}
+      {sendAtInput !== null ? (
+        <fieldset className={styles.schedulePanel}>
+          <legend>
+            <i className="bx bx-clock" aria-hidden="true" />
+            Schedule send
+          </legend>
+          <div className={styles.schedulePresets}>
+            {schedulePresets(new Date()).map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                aria-pressed={sendAtInput === toDateTimeInput(preset.at)}
+                onClick={() => setSendAtInput(toDateTimeInput(preset.at))}
+              >
+                <strong>{preset.label}</strong>
+                <small>{formatFullDate(preset.at.getTime())}</small>
+              </button>
+            ))}
+          </div>
+          <label className={styles.scheduleTime}>
+            Date and time
+            <input
+              type="datetime-local"
+              required
+              value={sendAtInput}
+              min={toDateTimeInput(new Date())}
+              onChange={(event) => setSendAtInput(event.target.value)}
+            />
+          </label>
+          <p className={styles.scheduleHint}>
+            {scheduledAt
+              ? `Sends ${formatFullDate(scheduledAt)} (your time, ${Intl.DateTimeFormat().resolvedOptions().timeZone}). You can cancel it from the Scheduled folder until then.`
+              : "Pick when this email should go out."}
+          </p>
+        </fieldset>
+      ) : null}
       {error ? <p className={styles.error}>{error}</p> : null}
       <div className={styles.composerFooter}>
         <div className={styles.composerTools}>
@@ -319,8 +379,22 @@ export default function MailComposer({
           <Button className="text" type="button" disabled={sending} onClick={() => void cancel()}>
             Discard
           </Button>
+          <Button
+            className="secondary"
+            type="button"
+            disabled={sending}
+            aria-expanded={sendAtInput !== null}
+            onClick={() =>
+              setSendAtInput((current) =>
+                current === null ? toDateTimeInput(schedulePresets(new Date())[0].at) : null,
+              )
+            }
+          >
+            <i className={`bx ${sendAtInput === null ? "bx-clock" : "bx-x"}`} aria-hidden="true" />
+            {sendAtInput === null ? "Send later" : "Don't schedule"}
+          </Button>
           <Button className="green" type="submit" disabled={busy}>
-            {sending ? "Sending…" : "Send"}
+            {sending ? (sendAtInput === null ? "Sending…" : "Scheduling…") : sendLabel}
           </Button>
         </div>
       </div>

@@ -207,6 +207,10 @@ async function loadAttachments(
     inboxId,
     uploadIds,
   });
+  return { uploads, files: await readUploads(ctx, uploads) };
+}
+
+async function readUploads(ctx: ActionCtx, uploads: Doc<"mailUploads">[]) {
   const files = [];
   for (const upload of uploads) {
     const blob = await ctx.storage.get(upload.storageId);
@@ -219,7 +223,7 @@ async function loadAttachments(
       contentType: upload.contentType,
     });
   }
-  return { uploads, files };
+  return files;
 }
 
 async function cleanupUploads(ctx: ActionCtx, uploads: Doc<"mailUploads">[]) {
@@ -228,6 +232,149 @@ async function cleanupUploads(ctx: ActionCtx, uploads: Doc<"mailUploads">[]) {
       uploadIds: uploads.map((upload) => upload._id),
     });
   }
+}
+
+type OutgoingFile = { filename: string; content: string; contentType: string };
+type RenderedBody = { html: string; text: string };
+
+async function deliverReply(
+  resend: Resend,
+  resendInboxId: string,
+  resendThreadId: string,
+  message: {
+    emailId: string;
+    body: RenderedBody;
+    replyAll: boolean;
+    cc: string[];
+    files: OutgoingFile[];
+  },
+  idempotencyKey: string,
+) {
+  unwrap(
+    await resend.inboxes.threads.emails.reply(
+      {
+        inboxId: resendInboxId,
+        threadId: resendThreadId,
+        emailId: message.emailId,
+        ...message.body,
+        replyAll: message.replyAll,
+        ...(message.cc.length > 0 ? { cc: message.cc } : {}),
+        ...(message.files.length > 0 ? { attachments: message.files } : {}),
+      },
+      { idempotencyKey },
+    ),
+    "send reply",
+  );
+}
+
+async function deliverForward(
+  resend: Resend,
+  resendInboxId: string,
+  resendThreadId: string,
+  message: {
+    emailId: string;
+    to: string[];
+    cc: string[];
+    body: RenderedBody | null;
+    files: OutgoingFile[];
+  },
+  idempotencyKey: string,
+) {
+  unwrap(
+    await resend.inboxes.threads.emails.forward(
+      {
+        inboxId: resendInboxId,
+        threadId: resendThreadId,
+        emailId: message.emailId,
+        to: message.to,
+        ...(message.cc.length > 0 ? { cc: message.cc } : {}),
+        ...(message.body ?? {}),
+        ...(message.files.length > 0 ? { attachments: message.files } : {}),
+      },
+      { idempotencyKey },
+    ),
+    "forward email",
+  );
+}
+
+/** Sends a new email through a draft and returns its Resend thread id. */
+async function deliverNew(
+  resend: Resend,
+  resendInboxId: string,
+  message: {
+    to: string[];
+    cc: string[];
+    subject: string;
+    body: RenderedBody;
+    files: OutgoingFile[];
+  },
+  idempotencyKey: string,
+): Promise<string | null> {
+  const draft = unwrap(
+    await resend.inboxes.drafts.create(
+      {
+        inboxId: resendInboxId,
+        to: message.to,
+        ...(message.cc.length > 0 ? { cc: message.cc } : {}),
+        subject: message.subject,
+        ...message.body,
+        ...(message.files.length > 0 ? { attachments: message.files } : {}),
+      },
+      { idempotencyKey: `mail-draft/${idempotencyKey}` },
+    ),
+    "create draft",
+  );
+  unwrap(
+    await resend.inboxes.drafts.send(
+      { inboxId: resendInboxId, draftId: draft.id },
+      { idempotencyKey: `mail-draft-send/${idempotencyKey}` },
+    ),
+    "send email",
+  );
+  const sent = await resend.inboxes.drafts.get({
+    inboxId: resendInboxId,
+    draftId: draft.id,
+  });
+  return sent.data?.thread_id ?? null;
+}
+
+/** Shows the new thread in Sent straight away rather than waiting for the webhook. */
+async function syncAfterNew(
+  ctx: ActionCtx,
+  resend: Resend,
+  resendInboxId: string,
+  resendThreadId: string | null,
+) {
+  if (resendThreadId) {
+    await syncThreadFromResend(ctx, resend, resendInboxId, resendThreadId);
+  } else {
+    await syncRecentThreads(ctx, resend, resendInboxId, 10);
+  }
+}
+
+/** Stores the email for later; attachments stay staged until it goes out. */
+async function scheduleEmail(
+  ctx: ActionCtx,
+  email: {
+    inboxId: Id<"mailInboxes">;
+    kind: "compose" | "reply" | "forward";
+    threadId?: Id<"mailThreads">;
+    emailId?: string;
+    replyAll?: boolean;
+    to: string[];
+    cc: string[];
+    subject: string;
+    body: RenderedBody | null;
+    uploadIds: Id<"mailUploads">[] | undefined;
+    sendAt: number;
+  },
+): Promise<Id<"mailScheduledEmails">> {
+  const { body, uploadIds, ...rest } = email;
+  return await ctx.runMutation(internal.mail.createScheduled, {
+    ...rest,
+    ...(body ? { html: body.html, text: body.text, snippet: makeSnippet(body.text) } : {}),
+    uploadIds: uploadIds ?? [],
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -432,6 +579,8 @@ export const getAttachmentUrl = action({
   },
 });
 
+const sendAtValidator = v.optional(v.number());
+
 export const reply = action({
   args: {
     threadId: v.id("mailThreads"),
@@ -442,6 +591,8 @@ export const reply = action({
     uploadIds: v.optional(v.array(v.id("mailUploads"))),
     signature: signatureValidator,
     requestId: v.string(),
+    /** Send later at this time instead of now. */
+    sendAt: sendAtValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -458,23 +609,31 @@ export const reply = action({
       { ...sender, email: inbox.address },
       args.signature ?? "compact",
     );
+    const cc = cleanAddresses(args.cc ?? []);
+    if (args.sendAt !== undefined) {
+      await scheduleEmail(ctx, {
+        inboxId: inbox._id,
+        kind: "reply",
+        threadId: thread._id,
+        emailId: args.emailId,
+        replyAll: args.replyAll,
+        to: [],
+        cc,
+        subject: thread.subject,
+        body,
+        uploadIds: args.uploadIds,
+        sendAt: args.sendAt,
+      });
+      return null;
+    }
     const { uploads, files } = await loadAttachments(ctx, inbox._id, args.uploadIds);
     const resend = getResend();
-    const cc = cleanAddresses(args.cc ?? []);
-    unwrap(
-      await resend.inboxes.threads.emails.reply(
-        {
-          inboxId: inbox.resendInboxId,
-          threadId: thread.resendThreadId,
-          emailId: args.emailId,
-          ...body,
-          replyAll: args.replyAll,
-          ...(cc.length > 0 ? { cc } : {}),
-          ...(files.length > 0 ? { attachments: files } : {}),
-        },
-        { idempotencyKey: `mail-reply/${args.requestId}` },
-      ),
-      "send reply",
+    await deliverReply(
+      resend,
+      inbox.resendInboxId,
+      thread.resendThreadId,
+      { emailId: args.emailId, body, replyAll: args.replyAll, cc, files },
+      `mail-reply/${args.requestId}`,
     );
     await cleanupUploads(ctx, uploads);
     await syncThreadFromResend(ctx, resend, inbox.resendInboxId, thread.resendThreadId);
@@ -492,6 +651,7 @@ export const forward = action({
     uploadIds: v.optional(v.array(v.id("mailUploads"))),
     signature: signatureValidator,
     requestId: v.string(),
+    sendAt: sendAtValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -508,23 +668,30 @@ export const forward = action({
     if (to.length === 0) {
       throw new Error("Add at least one recipient");
     }
+    const cc = cleanAddresses(args.cc ?? []);
+    if (args.sendAt !== undefined) {
+      await scheduleEmail(ctx, {
+        inboxId: inbox._id,
+        kind: "forward",
+        threadId: thread._id,
+        emailId: args.emailId,
+        to,
+        cc,
+        subject: thread.subject,
+        body,
+        uploadIds: args.uploadIds,
+        sendAt: args.sendAt,
+      });
+      return null;
+    }
     const { uploads, files } = await loadAttachments(ctx, inbox._id, args.uploadIds);
     const resend = getResend();
-    const cc = cleanAddresses(args.cc ?? []);
-    unwrap(
-      await resend.inboxes.threads.emails.forward(
-        {
-          inboxId: inbox.resendInboxId,
-          threadId: thread.resendThreadId,
-          emailId: args.emailId,
-          to,
-          ...(cc.length > 0 ? { cc } : {}),
-          ...(body ?? {}),
-          ...(files.length > 0 ? { attachments: files } : {}),
-        },
-        { idempotencyKey: `mail-forward/${args.requestId}` },
-      ),
-      "forward email",
+    await deliverForward(
+      resend,
+      inbox.resendInboxId,
+      thread.resendThreadId,
+      { emailId: args.emailId, to, cc, body, files },
+      `mail-forward/${args.requestId}`,
     );
     await cleanupUploads(ctx, uploads);
     await syncThreadFromResend(ctx, resend, inbox.resendInboxId, thread.resendThreadId);
@@ -543,6 +710,7 @@ export const compose = action({
     uploadIds: v.optional(v.array(v.id("mailUploads"))),
     signature: signatureValidator,
     requestId: v.string(),
+    sendAt: sendAtValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -555,7 +723,8 @@ export const compose = action({
       throw new Error("Add at least one recipient");
     }
     const message = renderBody(args.body);
-    if (!args.subject.trim() || !message) {
+    const subject = args.subject.trim();
+    if (!subject || !message) {
       throw new Error("Add a subject and a message");
     }
     const body = withSignature(
@@ -563,40 +732,103 @@ export const compose = action({
       { ...sender, email: inbox.address },
       args.signature ?? "full",
     );
+    const cc = cleanAddresses(args.cc ?? []);
+    if (args.sendAt !== undefined) {
+      await scheduleEmail(ctx, {
+        inboxId: inbox._id,
+        kind: "compose",
+        to,
+        cc,
+        subject,
+        body,
+        uploadIds: args.uploadIds,
+        sendAt: args.sendAt,
+      });
+      return null;
+    }
     const { uploads, files } = await loadAttachments(ctx, inbox._id, args.uploadIds);
     const resend = getResend();
-    const cc = cleanAddresses(args.cc ?? []);
-    const draft = unwrap(
-      await resend.inboxes.drafts.create(
-        {
-          inboxId: inbox.resendInboxId,
-          to,
-          ...(cc.length > 0 ? { cc } : {}),
-          subject: args.subject.trim(),
-          ...body,
-          ...(files.length > 0 ? { attachments: files } : {}),
-        },
-        { idempotencyKey: `mail-draft/${args.requestId}` },
-      ),
-      "create draft",
-    );
-    unwrap(
-      await resend.inboxes.drafts.send(
-        { inboxId: inbox.resendInboxId, draftId: draft.id },
-        { idempotencyKey: `mail-draft-send/${args.requestId}` },
-      ),
-      "send email",
+    const resendThreadId = await deliverNew(
+      resend,
+      inbox.resendInboxId,
+      { to, cc, subject, body, files },
+      args.requestId,
     );
     await cleanupUploads(ctx, uploads);
-    // Show the new thread in Sent straight away rather than waiting for the webhook.
-    const sent = await resend.inboxes.drafts.get({
-      inboxId: inbox.resendInboxId,
-      draftId: draft.id,
-    });
-    if (sent.data?.thread_id) {
-      await syncThreadFromResend(ctx, resend, inbox.resendInboxId, sent.data.thread_id);
-    } else {
-      await syncRecentThreads(ctx, resend, inbox.resendInboxId, 10);
+    await syncAfterNew(ctx, resend, inbox.resendInboxId, resendThreadId);
+    return null;
+  },
+});
+
+/** Runs at the scheduled time; failures are kept on the row for staff to retry. */
+export const sendScheduledEmail = internalAction({
+  args: { scheduledId: v.id("mailScheduledEmails") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const claimed = await ctx.runMutation(internal.mail.claimScheduled, args);
+    if (!claimed) {
+      return null;
+    }
+    const { scheduled, inbox, resendThreadId, uploads } = claimed;
+    const key = `mail-scheduled/${scheduled._id}/${scheduled.attempt}`;
+    const body =
+      scheduled.html !== undefined && scheduled.text !== undefined
+        ? { html: scheduled.html, text: scheduled.text }
+        : null;
+    // Once finishScheduled has run, a later error can't mark the row failed.
+    try {
+      const resend = getResend();
+      const files = await readUploads(ctx, uploads);
+      if (scheduled.kind === "compose") {
+        if (!body) {
+          throw new Error("The message is empty");
+        }
+        const threadId = await deliverNew(
+          resend,
+          inbox.resendInboxId,
+          { to: scheduled.to, cc: scheduled.cc, subject: scheduled.subject, body, files },
+          key,
+        );
+        await ctx.runMutation(internal.mail.finishScheduled, args);
+        await syncAfterNew(ctx, resend, inbox.resendInboxId, threadId);
+        return null;
+      }
+      if (!resendThreadId || !scheduled.emailId) {
+        throw new Error("The conversation no longer exists");
+      }
+      if (scheduled.kind === "reply") {
+        if (!body) {
+          throw new Error("The message is empty");
+        }
+        await deliverReply(
+          resend,
+          inbox.resendInboxId,
+          resendThreadId,
+          {
+            emailId: scheduled.emailId,
+            body,
+            replyAll: scheduled.replyAll ?? false,
+            cc: scheduled.cc,
+            files,
+          },
+          key,
+        );
+      } else {
+        await deliverForward(
+          resend,
+          inbox.resendInboxId,
+          resendThreadId,
+          { emailId: scheduled.emailId, to: scheduled.to, cc: scheduled.cc, body, files },
+          key,
+        );
+      }
+      await ctx.runMutation(internal.mail.finishScheduled, args);
+      await syncThreadFromResend(ctx, resend, inbox.resendInboxId, resendThreadId);
+    } catch (caught) {
+      await ctx.runMutation(internal.mail.failScheduled, {
+        scheduledId: scheduled._id,
+        error: caught instanceof Error ? caught.message : "Could not send the email",
+      });
     }
     return null;
   },

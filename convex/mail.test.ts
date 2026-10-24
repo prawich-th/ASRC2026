@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import { withSignature } from "./lib/mailSignature";
 import {
@@ -271,5 +271,199 @@ describe("staff position", () => {
     });
     const member = await t.run((ctx) => ctx.db.get("users", ids.member));
     expect(member?.staffPosition).toBe("Website Lead");
+  });
+});
+
+describe("scheduled send", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  async function setupWithThread() {
+    const ctx = await setup();
+    const threadId = await ctx.t.mutation(internal.mail.upsertThread, {
+      resendInboxId: "inbox_external",
+      resendThreadId: "thread_1",
+      snapshot,
+    });
+    const upload = async (uploadedBy: typeof ctx.ids.member) =>
+      await ctx.t.run(async (c) => {
+        const storageId = await c.storage.store(new Blob(["hello"]));
+        return await c.db.insert("mailUploads", {
+          storageId,
+          inboxId: ctx.ids.inbox,
+          uploadedBy,
+          filename: "a.txt",
+          contentType: "text/plain",
+          size: 5,
+        });
+      });
+    return { ...ctx, threadId: threadId!, upload };
+  }
+
+  test("members schedule, list, reschedule and cancel; outsiders cannot", async () => {
+    const { t, ids, as, threadId, upload } = await setupWithThread();
+    const uploadId = await upload(ids.member);
+    const sendAt = Date.now() + 60 * 60 * 1000;
+    const args = {
+      inboxId: ids.inbox,
+      kind: "reply" as const,
+      threadId,
+      emailId: "email_1",
+      replyAll: false,
+      to: [],
+      cc: [],
+      subject: snapshot.subject,
+      html: "<p>Hi</p>",
+      text: "Hi",
+      uploadIds: [uploadId],
+      sendAt,
+    };
+
+    await expect(
+      as(ids.outsider).mutation(internal.mail.createScheduled, args),
+    ).rejects.toThrow("Unauthorized");
+    await expect(
+      as(ids.member).mutation(internal.mail.createScheduled, {
+        ...args,
+        sendAt: Date.now() - 1000,
+      }),
+    ).rejects.toThrow("future");
+    await expect(
+      as(ids.admin).mutation(internal.mail.createScheduled, args),
+    ).rejects.toThrow("Attachment not found");
+
+    const scheduledId = await as(ids.member).mutation(
+      internal.mail.createScheduled,
+      args,
+    );
+    const listed = await as(ids.admin).query(api.mail.listScheduled, {
+      inboxId: ids.inbox,
+    });
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatchObject({
+      kind: "reply",
+      status: "scheduled",
+      attachmentCount: 1,
+      sendAt,
+    });
+    await expect(
+      as(ids.outsider).query(api.mail.listScheduled, { inboxId: ids.inbox }),
+    ).rejects.toThrow("Unauthorized");
+
+    // Staged files on a scheduled email survive the upload TTL and can't be
+    // removed or reused from the composer.
+    await t.mutation(internal.mail.deleteUploads, { uploadIds: [uploadId] });
+    await as(ids.member).mutation(api.mail.removeAttachmentUpload, { uploadId });
+    expect(await t.run((c) => c.db.get("mailUploads", uploadId))).not.toBeNull();
+    await expect(
+      as(ids.member).mutation(internal.mail.createScheduled, args),
+    ).rejects.toThrow("Attachment not found");
+
+    const later = sendAt + 60 * 60 * 1000;
+    await as(ids.member).mutation(api.mail.rescheduleScheduled, {
+      scheduledId,
+      sendAt: later,
+    });
+    const row = await t.run((c) => c.db.get("mailScheduledEmails", scheduledId));
+    expect(row).toMatchObject({ sendAt: later, attempt: 1, status: "scheduled" });
+
+    await expect(
+      as(ids.outsider).mutation(api.mail.cancelScheduled, { scheduledId }),
+    ).rejects.toThrow("Unauthorized");
+    await as(ids.member).mutation(api.mail.cancelScheduled, { scheduledId });
+    expect(await t.run((c) => c.db.get("mailScheduledEmails", scheduledId))).toBeNull();
+    expect(await t.run((c) => c.db.get("mailUploads", uploadId))).toBeNull();
+  });
+
+  test("sends at the scheduled time and cleans up", async () => {
+    vi.useFakeTimers();
+    const { t, ids, as, threadId, upload } = await setupWithThread();
+    const uploadId = await upload(ids.member);
+    const requests: { method: string; url: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+        requests.push({
+          method,
+          url,
+          body: init?.body ? JSON.parse(String(init.body)) : undefined,
+        });
+        const json = (data: unknown) =>
+          new Response(JSON.stringify(data), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        if (method === "POST") {
+          return json({ id: "email_2" });
+        }
+        if (url.includes("/emails")) {
+          return json({ object: "list", has_more: false, data: [] });
+        }
+        return json({ id: "thread_1", subject: snapshot.subject, folder: "inbox", read: true });
+      }),
+    );
+    const scheduledId = await as(ids.member).mutation(internal.mail.createScheduled, {
+      inboxId: ids.inbox,
+      kind: "reply",
+      threadId,
+      emailId: "email_1",
+      replyAll: true,
+      to: [],
+      cc: ["cc@example.com"],
+      subject: snapshot.subject,
+      html: "<p>Hi</p>",
+      text: "Hi",
+      uploadIds: [uploadId],
+      sendAt: Date.now() + 60_000,
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const reply = requests.find((r) => r.method === "POST");
+    expect(reply?.url).toContain("/threads/thread_1/emails/email_1/reply");
+    expect(reply?.body).toMatchObject({
+      html: "<p>Hi</p>",
+      text: "Hi",
+      reply_all: true,
+      cc: ["cc@example.com"],
+    });
+    expect(await t.run((c) => c.db.get("mailScheduledEmails", scheduledId))).toBeNull();
+    expect(await t.run((c) => c.db.get("mailUploads", uploadId))).toBeNull();
+  });
+
+  test("keeps a failed send for retry", async () => {
+    vi.useFakeTimers();
+    const { t, ids, as, threadId } = await setupWithThread();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ name: "validation_error", message: "Bad recipient", statusCode: 422 }),
+            { status: 422, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    const scheduledId = await as(ids.member).mutation(internal.mail.createScheduled, {
+      inboxId: ids.inbox,
+      kind: "forward",
+      threadId,
+      emailId: "email_1",
+      to: ["someone@example.com"],
+      cc: [],
+      subject: snapshot.subject,
+      uploadIds: [],
+      sendAt: Date.now() + 60_000,
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const [row] = await as(ids.member).query(api.mail.listScheduled, {
+      inboxId: ids.inbox,
+    });
+    expect(row).toMatchObject({ _id: scheduledId, status: "failed" });
+    expect(row.error).toContain("Bad recipient");
   });
 });

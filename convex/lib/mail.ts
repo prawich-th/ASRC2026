@@ -77,7 +77,10 @@ export const mailThreadFields = {
   lastActivityAt: v.number(),
 };
 
-/** Files staged for an outgoing email; deleted once sent or after a day. */
+/**
+ * Files staged for an outgoing email; deleted once sent or after a day.
+ * Files on a scheduled email are kept until it is sent or cancelled.
+ */
 export const mailUploadFields = {
   storageId: v.id("_storage"),
   inboxId: v.id("mailInboxes"),
@@ -85,6 +88,54 @@ export const mailUploadFields = {
   filename: v.string(),
   contentType: v.string(),
   size: v.number(),
+  scheduledEmailId: v.optional(v.id("mailScheduledEmails")),
+};
+
+/** Scheduled emails can be sent at most this far ahead. */
+export const MAIL_SCHEDULE_MAX_AHEAD_MS = 60 * 24 * 60 * 60 * 1000;
+
+/** A "sending" row older than this is treated as failed (the action died). */
+export const MAIL_SCHEDULE_STUCK_MS = 15 * 60 * 1000;
+
+export const mailScheduledKindValidator = v.union(
+  v.literal("compose"),
+  v.literal("reply"),
+  v.literal("forward"),
+);
+
+export const mailScheduledStatusValidator = v.union(
+  v.literal("scheduled"),
+  v.literal("sending"),
+  v.literal("failed"),
+);
+
+/**
+ * Emails waiting to be sent later. The body is rendered (with signature)
+ * when scheduled; the row is deleted once Resend accepts the email.
+ */
+export const mailScheduledEmailFields = {
+  inboxId: v.id("mailInboxes"),
+  createdBy: v.id("users"),
+  kind: mailScheduledKindValidator,
+  /** Reply and forward only. */
+  threadId: v.optional(v.id("mailThreads")),
+  emailId: v.optional(v.string()),
+  replyAll: v.optional(v.boolean()),
+  to: v.array(v.string()),
+  cc: v.array(v.string()),
+  /** The new email's subject, or the thread's for replies and forwards. */
+  subject: v.string(),
+  html: v.optional(v.string()),
+  text: v.optional(v.string()),
+  snippet: v.optional(v.string()),
+  uploadIds: v.array(v.id("mailUploads")),
+  sendAt: v.number(),
+  status: mailScheduledStatusValidator,
+  /** Bumped on every reschedule so Resend idempotency keys stay unique. */
+  attempt: v.number(),
+  jobId: v.optional(v.id("_scheduled_functions")),
+  sendingSince: v.optional(v.number()),
+  error: v.optional(v.string()),
 };
 
 export const mailWebhookEventFields = {

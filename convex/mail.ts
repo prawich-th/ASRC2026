@@ -4,10 +4,11 @@ import {
   internalMutation,
   internalQuery,
   mutation,
+  MutationCtx,
   query,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { Doc } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import schema from "./schema";
 import {
   getCurrentUser,
@@ -18,7 +19,11 @@ import {
   canAccessInbox,
   isStaffUser,
   MAIL_ATTACHMENT_LIMIT_BYTES,
+  MAIL_SCHEDULE_MAX_AHEAD_MS,
+  MAIL_SCHEDULE_STUCK_MS,
   mailFolderValidator,
+  mailScheduledKindValidator,
+  mailScheduledStatusValidator,
   mailThreadSnapshotValidator,
   requireInboxAccess,
 } from "./lib/mail";
@@ -169,7 +174,7 @@ export const removeAttachmentUpload = mutation({
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     const upload = await ctx.db.get("mailUploads", args.uploadId);
-    if (!upload || upload.uploadedBy !== user._id) {
+    if (!upload || upload.uploadedBy !== user._id || upload.scheduledEmailId) {
       return null;
     }
     await ctx.storage.delete(upload.storageId);
@@ -427,7 +432,8 @@ export const getUploadsForAction = internalQuery({
       if (
         !upload ||
         upload.uploadedBy !== user._id ||
-        upload.inboxId !== args.inboxId
+        upload.inboxId !== args.inboxId ||
+        upload.scheduledEmailId
       ) {
         throw new Error("Attachment not found. Please attach the file again.");
       }
@@ -441,20 +447,32 @@ export const getUploadsForAction = internalQuery({
   },
 });
 
+/** Also the upload TTL, which leaves files on a scheduled email alone. */
 export const deleteUploads = internalMutation({
-  args: { uploadIds: v.array(v.id("mailUploads")) },
+  args: {
+    uploadIds: v.array(v.id("mailUploads")),
+    includeScheduled: v.optional(v.boolean()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
-    for (const uploadId of args.uploadIds) {
-      const upload = await ctx.db.get("mailUploads", uploadId);
-      if (upload) {
-        await ctx.storage.delete(upload.storageId);
-        await ctx.db.delete("mailUploads", upload._id);
-      }
-    }
+    await deleteUploadRows(ctx, args.uploadIds, args.includeScheduled ?? false);
     return null;
   },
 });
+
+async function deleteUploadRows(
+  ctx: MutationCtx,
+  uploadIds: Id<"mailUploads">[],
+  includeScheduled: boolean,
+) {
+  for (const uploadId of uploadIds) {
+    const upload = await ctx.db.get("mailUploads", uploadId);
+    if (upload && (includeScheduled || !upload.scheduledEmailId)) {
+      await ctx.storage.delete(upload.storageId);
+      await ctx.db.delete("mailUploads", upload._id);
+    }
+  }
+}
 
 /** Returns false when this Svix message id was already processed. */
 export const recordWebhookEvent = internalMutation({
@@ -473,5 +491,290 @@ export const recordWebhookEvent = internalMutation({
       receivedAt: Date.now(),
     });
     return true;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Scheduled send
+
+const SCHEDULED_LIST_LIMIT = 100;
+
+function assertSendAt(sendAt: number) {
+  const now = Date.now();
+  if (!Number.isFinite(sendAt) || sendAt <= now) {
+    throw new Error("Pick a time in the future");
+  }
+  if (sendAt > now + MAIL_SCHEDULE_MAX_AHEAD_MS) {
+    throw new Error("Emails can be scheduled at most 60 days ahead");
+  }
+}
+
+/** A "sending" row whose action died counts as failed so it can be retried. */
+function effectiveStatus(row: Doc<"mailScheduledEmails">) {
+  if (
+    row.status === "sending" &&
+    Date.now() - (row.sendingSince ?? 0) > MAIL_SCHEDULE_STUCK_MS
+  ) {
+    return "failed" as const;
+  }
+  return row.status;
+}
+
+async function requireEditableScheduled(
+  ctx: MutationCtx,
+  scheduledId: Id<"mailScheduledEmails">,
+) {
+  const row = await ctx.db.get("mailScheduledEmails", scheduledId);
+  if (!row) {
+    throw new Error("This email has already been sent or cancelled");
+  }
+  await requireInboxAccess(ctx, row.inboxId);
+  if (effectiveStatus(row) === "sending") {
+    throw new Error("This email is being sent right now");
+  }
+  return row;
+}
+
+const scheduledSummaryValidator = v.object({
+  _id: v.id("mailScheduledEmails"),
+  kind: mailScheduledKindValidator,
+  threadId: v.optional(v.id("mailThreads")),
+  to: v.array(v.string()),
+  cc: v.array(v.string()),
+  subject: v.string(),
+  snippet: v.optional(v.string()),
+  attachmentCount: v.number(),
+  sendAt: v.number(),
+  status: mailScheduledStatusValidator,
+  error: v.optional(v.string()),
+  createdByName: v.string(),
+});
+
+/** Emails waiting to go out from an inbox, soonest first. */
+export const listScheduled = query({
+  args: { inboxId: v.id("mailInboxes") },
+  returns: v.array(scheduledSummaryValidator),
+  handler: async (ctx, args) => {
+    await requireInboxAccess(ctx, args.inboxId);
+    const rows = await ctx.db
+      .query("mailScheduledEmails")
+      .withIndex("by_inboxId_and_sendAt", (q) => q.eq("inboxId", args.inboxId))
+      .take(SCHEDULED_LIST_LIMIT);
+    const result = [];
+    for (const row of rows) {
+      const author = await ctx.db.get("users", row.createdBy);
+      result.push({
+        _id: row._id,
+        kind: row.kind,
+        threadId: row.threadId,
+        to: row.to,
+        cc: row.cc,
+        subject: row.subject,
+        snippet: row.snippet,
+        attachmentCount: row.uploadIds.length,
+        sendAt: row.sendAt,
+        status: effectiveStatus(row),
+        error: row.error,
+        createdByName: author ? senderOf(author).name : "Former staff member",
+      });
+    }
+    return result;
+  },
+});
+
+export const cancelScheduled = mutation({
+  args: { scheduledId: v.id("mailScheduledEmails") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await requireEditableScheduled(ctx, args.scheduledId);
+    if (row.jobId) {
+      await ctx.scheduler.cancel(row.jobId);
+    }
+    await deleteUploadRows(ctx, row.uploadIds, true);
+    await ctx.db.delete("mailScheduledEmails", row._id);
+    return null;
+  },
+});
+
+/** Changes the send time; also retries a failed email. */
+export const rescheduleScheduled = mutation({
+  args: {
+    scheduledId: v.id("mailScheduledEmails"),
+    /** Omit to send straight away. */
+    sendAt: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await requireEditableScheduled(ctx, args.scheduledId);
+    const sendAt = args.sendAt ?? Date.now();
+    if (args.sendAt !== undefined) {
+      assertSendAt(sendAt);
+    }
+    if (row.jobId) {
+      await ctx.scheduler.cancel(row.jobId);
+    }
+    const jobId = await ctx.scheduler.runAt(
+      sendAt,
+      internal.mailActions.sendScheduledEmail,
+      { scheduledId: row._id },
+    );
+    await ctx.db.patch("mailScheduledEmails", row._id, {
+      sendAt,
+      status: "scheduled",
+      attempt: row.attempt + 1,
+      jobId,
+      sendingSince: undefined,
+      error: undefined,
+    });
+    return null;
+  },
+});
+
+/** Runs as the calling user from the compose, reply and forward actions. */
+export const createScheduled = internalMutation({
+  args: {
+    inboxId: v.id("mailInboxes"),
+    kind: mailScheduledKindValidator,
+    threadId: v.optional(v.id("mailThreads")),
+    emailId: v.optional(v.string()),
+    replyAll: v.optional(v.boolean()),
+    to: v.array(v.string()),
+    cc: v.array(v.string()),
+    subject: v.string(),
+    html: v.optional(v.string()),
+    text: v.optional(v.string()),
+    snippet: v.optional(v.string()),
+    uploadIds: v.array(v.id("mailUploads")),
+    sendAt: v.number(),
+  },
+  returns: v.id("mailScheduledEmails"),
+  handler: async (ctx, args) => {
+    const { user } = await requireInboxAccess(ctx, args.inboxId);
+    assertSendAt(args.sendAt);
+    if (args.threadId) {
+      const thread = await ctx.db.get("mailThreads", args.threadId);
+      if (!thread || thread.inboxId !== args.inboxId) {
+        throw new Error("Thread not found");
+      }
+    }
+    let total = 0;
+    for (const uploadId of args.uploadIds) {
+      const upload = await ctx.db.get("mailUploads", uploadId);
+      if (
+        !upload ||
+        upload.uploadedBy !== user._id ||
+        upload.inboxId !== args.inboxId ||
+        upload.scheduledEmailId
+      ) {
+        throw new Error("Attachment not found. Please attach the file again.");
+      }
+      total += upload.size;
+    }
+    if (total > MAIL_ATTACHMENT_LIMIT_BYTES) {
+      throw new Error("Attachments can be at most 25 MB in total");
+    }
+    const scheduledId = await ctx.db.insert("mailScheduledEmails", {
+      ...args,
+      createdBy: user._id,
+      status: "scheduled",
+      attempt: 0,
+    });
+    for (const uploadId of args.uploadIds) {
+      await ctx.db.patch("mailUploads", uploadId, { scheduledEmailId: scheduledId });
+    }
+    const jobId = await ctx.scheduler.runAt(
+      args.sendAt,
+      internal.mailActions.sendScheduledEmail,
+      { scheduledId },
+    );
+    await ctx.db.patch("mailScheduledEmails", scheduledId, { jobId });
+    return scheduledId;
+  },
+});
+
+/**
+ * Marks a due email as sending and returns what the action needs, or null
+ * when it was cancelled or rescheduled in the meantime.
+ */
+export const claimScheduled = internalMutation({
+  args: { scheduledId: v.id("mailScheduledEmails") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      scheduled: schema.doc("mailScheduledEmails"),
+      inbox: schema.doc("mailInboxes"),
+      resendThreadId: v.optional(v.string()),
+      uploads: v.array(schema.doc("mailUploads")),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get("mailScheduledEmails", args.scheduledId);
+    if (!row || row.status !== "scheduled" || row.sendAt > Date.now()) {
+      return null;
+    }
+    const fail = async (error: string) => {
+      await ctx.db.patch("mailScheduledEmails", row._id, {
+        status: "failed",
+        error,
+        jobId: undefined,
+      });
+      return null;
+    };
+    const inbox = await ctx.db.get("mailInboxes", row.inboxId);
+    if (!inbox) {
+      return await fail("The inbox no longer exists");
+    }
+    let resendThreadId: string | undefined;
+    if (row.threadId) {
+      const thread = await ctx.db.get("mailThreads", row.threadId);
+      if (!thread) {
+        return await fail("The conversation no longer exists");
+      }
+      resendThreadId = thread.resendThreadId;
+    }
+    const uploads = [];
+    for (const uploadId of row.uploadIds) {
+      const upload = await ctx.db.get("mailUploads", uploadId);
+      if (!upload) {
+        return await fail("An attachment is missing");
+      }
+      uploads.push(upload);
+    }
+    await ctx.db.patch("mailScheduledEmails", row._id, {
+      status: "sending",
+      sendingSince: Date.now(),
+      jobId: undefined,
+    });
+    const scheduled = { ...row, status: "sending" as const };
+    return { scheduled, inbox, resendThreadId, uploads };
+  },
+});
+
+export const finishScheduled = internalMutation({
+  args: { scheduledId: v.id("mailScheduledEmails") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get("mailScheduledEmails", args.scheduledId);
+    if (row) {
+      await deleteUploadRows(ctx, row.uploadIds, true);
+      await ctx.db.delete("mailScheduledEmails", row._id);
+    }
+    return null;
+  },
+});
+
+export const failScheduled = internalMutation({
+  args: { scheduledId: v.id("mailScheduledEmails"), error: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get("mailScheduledEmails", args.scheduledId);
+    if (row && row.status === "sending") {
+      await ctx.db.patch("mailScheduledEmails", row._id, {
+        status: "failed",
+        error: args.error.slice(0, 500),
+        sendingSince: undefined,
+      });
+    }
+    return null;
   },
 });
