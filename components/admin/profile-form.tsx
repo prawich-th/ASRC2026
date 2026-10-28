@@ -6,6 +6,7 @@ import {
   MEDICAL_STUDENT_YEARS,
   PARTICIPANT_CATEGORIES,
   PREFIXES,
+  specialtyLabel,
 } from "@/lib/formOptions";
 import { EMPTY_PROFILE, ProfileFormValues } from "@/lib/profileForm";
 import { FormEvent, ReactNode, useState } from "react";
@@ -92,7 +93,7 @@ export default function ProfileForm({
         {text("otherName", "Other name")}
         {text("lastName", "Last name", { required: true })}
         {text("suffix", "Suffix")}
-        {text("specialty", "Specialty")}
+        {text("specialty", specialtyLabel(values.participantCategory))}
         {text("phone", "Phone number", { required: true, type: "tel" })}
         <label>
           Participant category *

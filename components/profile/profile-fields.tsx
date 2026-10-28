@@ -7,6 +7,7 @@ import {
   MEDICAL_STUDENT_YEARS,
   PARTICIPANT_CATEGORIES,
   PREFIXES,
+  specialtyLabel,
 } from "@/lib/formOptions";
 import { ProfileFormValues } from "@/lib/profileForm";
 import { useQuery } from "convex/react";
@@ -118,7 +119,7 @@ export default function ProfileFields({
       <FormField
         id={id("specialty")}
         className={styles.span4}
-        label="Specialty"
+        label={specialtyLabel(values.participantCategory)}
         maxLength={200}
         value={values.specialty}
         onChange={(event) => set("specialty", event.target.value)}

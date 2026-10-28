@@ -22,6 +22,17 @@ export const PARTICIPANT_CATEGORIES = [
 
 export const MEDICAL_STUDENT_YEARS = ["1", "2", "3", "4", "5", "6"] as const;
 
+export function specialtyLabel(participantCategory: string): string {
+  switch (participantCategory) {
+    case "Medical Student":
+      return "Program of studies";
+    case "Undergraduate Student":
+      return "Major";
+    default:
+      return "Specialty";
+  }
+}
+
 /** The research categories in the ASRC Academic Guidelines. */
 export const ABSTRACT_RESEARCH_CATEGORIES = [
   "basic_biomedical",
